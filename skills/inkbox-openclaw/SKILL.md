@@ -21,7 +21,7 @@ API-first communication infrastructure for AI agents — email, phone, text/SMS,
 ## Requirements
 
 - `INKBOX_API_KEY` — Inkbox API key
-- `node` on `PATH` (Node.js 18+)
+- `node` on `PATH` (Node.js 22+)
 - `INKBOX_AGENT_HANDLE` is optional; use it when already configured, otherwise ask the user which identity handle to use or create
 
 ## Runtime setup
@@ -46,7 +46,7 @@ Use `.mjs` scripts with standard ESM imports. Avoid relying on `tsx --eval` or t
 npm install @inkbox/sdk
 ```
 
-Requires Node.js ≥ 18. ESM module — no context manager needed:
+Requires Node.js ≥ 22. ESM module — no context manager needed:
 
 ```js
 import { Inkbox } from "@inkbox/sdk";
@@ -647,7 +647,7 @@ Returns `WhoamiApiKeyResponse` or `WhoamiJwtResponse` — discriminated on `auth
 
 ## Tunnels
 
-Bring a local Node process online at a public `https://{name}.tunnel.inkboxwire.com` URL via outbound HTTP/2 — no inbound port required. POSIX only.
+Bring a local Node process online at a public `https://{name}.inkboxwire.com` URL via outbound HTTP/2 — no inbound port required. POSIX only.
 
 > **Lifecycle caveat:** tunnels expect a long-running process and a writable state dir (`~/.inkbox/tunnels/{name}`). One-shot disposable scripts are not the right fit; use this from a sustained service. If you must run from a temporary working directory, pass `stateDir:` to a stable path so the connect secret and (in passthrough) private key persist between invocations.
 
@@ -659,7 +659,7 @@ const listener = await connect(inkbox, {
   name: "my-app",
   forwardTo: "http://127.0.0.1:8080",
 });
-console.log(listener.publicUrl);    // https://my-app.tunnel.inkboxwire.com
+console.log(listener.publicUrl);    // https://my-app.inkboxwire.com
 await listener.wait();              // until SIGINT/SIGTERM
 
 // In-process Fetch-API HTTP handler

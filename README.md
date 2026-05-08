@@ -11,8 +11,8 @@ API-first communication infrastructure for AI agents — email (with custom send
 | Package | Language | Install |
 |---|---|---|
 | [`inkbox`](./sdk/python/) | Python ≥ 3.11 | `pip install inkbox` |
-| [`@inkbox/sdk`](./sdk/typescript/) | TypeScript / Node ≥ 18 | `npm install @inkbox/sdk` |
-| [`@inkbox/cli`](./cli/) | CLI / Node ≥ 18 | `npm install -g @inkbox/cli` |
+| [`@inkbox/sdk`](./sdk/typescript/) | TypeScript / Node ≥ 22 | `npm install @inkbox/sdk` |
+| [`@inkbox/cli`](./cli/) | CLI / Node ≥ 22 | `npm install -g @inkbox/cli` |
 
 ---
 
@@ -124,7 +124,7 @@ inkbox vault get <secret-id>
 ### Tunnels (Python)
 
 ```python
-# Bring a local server online at https://my-app.tunnel.inkboxwire.com.
+# Bring a local server online at https://my-app.inkboxwire.com.
 # Outbound HTTP/2 only — no inbound port to open. POSIX only.
 listener = inkbox.tunnels.connect(name="my-app", forward_to="http://127.0.0.1:8080")
 print(listener.public_url)
