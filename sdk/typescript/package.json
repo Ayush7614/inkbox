@@ -1,6 +1,6 @@
 {
   "name": "@inkbox/sdk",
-  "version": "0.2.16",
+  "version": "0.3.0",
   "description": "TypeScript SDK for the Inkbox API",
   "license": "MIT",
   "type": "module",
@@ -8,22 +8,31 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tunnels/connect": {
+      "types": "./dist/tunnels/client/index.d.ts",
+      "node": "./dist/tunnels/client/index.js"
     }
   },
   "files": [
     "dist",
+    "protocol",
     "README.md"
   ],
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "verify:bundle": "node scripts/verify-bundle.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "hash-wasm": "^4.11.0"
+    "@peculiar/x509": "^2.0.0",
+    "hash-wasm": "^4.11.0",
+    "reflect-metadata": "^0.2.2",
+    "undici": "^7.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
@@ -42,6 +51,6 @@
     "url": "https://github.com/inkbox-ai/inkbox/issues"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   }
 }
