@@ -6,7 +6,6 @@ export const RAW_MAILBOX = {
   id: "aaaa1111-0000-0000-0000-000000000001",
   email_address: "agent01@inkbox.ai",
   sending_domain: "inkbox.ai",
-  display_name: "Agent 01",
   agent_identity_id: "eeee5555-0000-0000-0000-000000000001",
   created_at: "2026-03-09T00:00:00Z",
   updated_at: "2026-03-09T00:00:00Z",
@@ -235,7 +234,6 @@ export const RAW_TEXT_CONVERSATION_SUMMARY = {
 export const RAW_IDENTITY_MAILBOX = {
   id: "aaaa1111-0000-0000-0000-000000000001",
   email_address: "sales-agent@inkbox.ai",
-  display_name: "Sales Agent",
   agent_identity_id: "eeee5555-0000-0000-0000-000000000001",
   created_at: "2026-03-09T00:00:00Z",
   updated_at: "2026-03-09T00:00:00Z",

@@ -118,20 +118,22 @@ After creating a new identity:
 ## Channel Management
 
 ```js
-// Identity is created with a mailbox automatically — provision a phone number
-const phone = await identity.provisionPhoneNumber({ type: "toll_free" });   // or type: "local", state: "NY"
+// Identity is created with a mailbox AND tunnel atomically — both come back on the response
+console.log(identity.emailAddress);            // e.g. "sales-agent@inkboxmail.com"
+console.log(identity.tunnel?.publicHost);      // e.g. "sales-agent.inkboxwire.com"
 
-console.log(identity.emailAddress);  // e.g. "sales-agent@inkboxmail.com"
-console.log(phone.number);           // e.g. "+18005551234"
+// Phone numbers are still opt-in
+const phone = await identity.provisionPhoneNumber({ type: "toll_free" });
+console.log(phone.number);                     // e.g. "+18005551234"
 
-// Link existing channels
-await identity.assignMailbox("mailbox-uuid");
+// Existing phone number? Link it instead:
 await identity.assignPhoneNumber("phone-number-uuid");
 
-// Unlink without deleting
-await identity.unlinkMailbox();
+// Unlink the phone number without releasing it
 await identity.unlinkPhoneNumber();
 ```
+
+Mailboxes and tunnels are not separately linkable — they are 1:1 with their owning identity. Use `inkbox.createIdentity()` to provision both; use `identity.delete()` to cascade-tombstone both.
 
 ## Mail
 
@@ -685,21 +687,24 @@ await connect(inkbox, {
 });
 ```
 
-CRUD:
+Tunnels are provisioned atomically by `inkbox.createIdentity(...)`; there is no standalone `create` / `delete` / `restore` / `rotateSecret` surface. For passthrough, opt in at create time: `inkbox.createIdentity("my-app", { tunnel: { tlsMode: "passthrough" } })`.
+
+Reads + edit:
 
 ```js
 await inkbox.tunnels.list();
 await inkbox.tunnels.get("tunnel-uuid");
-const created = await inkbox.tunnels.create({ tunnelName: "my-app", tlsMode: "edge" });
-console.log(created.connectSecret);            // returned ONCE — save it
-await inkbox.tunnels.delete("tunnel-uuid");    // → pending_removal (24h grace)
-await inkbox.tunnels.restore("tunnel-uuid");
-await inkbox.tunnels.rotateSecret("tunnel-uuid");
+await inkbox.tunnels.update("tunnel-uuid", {
+  description: "Sales-outreach agent",
+  metadata: { team: "gtm" },
+});
+// Passthrough only:
+await inkbox.tunnels.signCsr("tunnel-uuid", { csrPem });
 ```
 
-If a previous run lost its state dir but the tunnel still exists, call `rotateSecret(id)` and pass `secret:` on the next `connect()`.
+Data-plane auth uses the same `apiKey` the `Inkbox` client was constructed with — admin-scoped or identity-scoped (matching the tunnel's identity). Mint a per-agent scoped key via `inkbox.apiKeys.create({ scopedIdentityId })` — there is no per-tunnel secret to rotate.
 
-Confirm with the user before creating or deleting tunnels on a shared org — names are unique per org and `delete` carries a 24h grace before the name frees up.
+Confirm with the user before deleting identities on a shared org — `identity.delete()` cascades to the linked mailbox + tunnel and revokes scoped API keys (the handle is reclaimable immediately).
 
 For full options and Python examples, see `skills/inkbox-tunnels/SKILL.md`.
 

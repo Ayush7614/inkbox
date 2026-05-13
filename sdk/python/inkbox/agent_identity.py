@@ -22,6 +22,7 @@ from inkbox.identities.types import (
     IdentityMailbox,
     IdentityPhoneNumber,
 )
+from inkbox.tunnels.types import Tunnel
 from inkbox.exceptions import InkboxError
 from inkbox.mail.types import (
     ForwardMode,
@@ -69,6 +70,7 @@ class AgentIdentity:
         self._inkbox = inkbox
         self._mailbox: IdentityMailbox | None = data.mailbox
         self._phone_number: IdentityPhoneNumber | None = data.phone_number
+        self._tunnel: Tunnel | None = data.tunnel
         self._credentials: Credentials | None = None
         self._credentials_vault_ref: object | None = None  # tracks which _unlocked built the cache
 
@@ -83,6 +85,19 @@ class AgentIdentity:
         return self._data.id
 
     @property
+    def display_name(self) -> str | None:
+        """Human-readable display name. Defaults server-side to ``agent_handle`` if unset."""
+        return self._data.display_name
+
+    @property
+    def description(self) -> str | None:
+        """Free-form org-internal description, or ``None`` if unset.
+
+        Never surfaces in outbound mail / call audio / public payloads.
+        """
+        return self._data.description
+
+    @property
     def email_address(self) -> str | None:
         """The email address assigned to this identity at creation time.
 
@@ -92,11 +107,17 @@ class AgentIdentity:
 
     @property
     def mailbox(self) -> IdentityMailbox | None:
+        """Mailbox linked to this identity. Non-null for live identities (1:1 invariant)."""
         return self._mailbox
 
     @property
     def phone_number(self) -> IdentityPhoneNumber | None:
         return self._phone_number
+
+    @property
+    def tunnel(self) -> Tunnel | None:
+        """Tunnel linked to this identity. Non-null for live identities (1:1 invariant)."""
+        return self._tunnel
 
     @property
     def credentials(self) -> Credentials:
@@ -244,68 +265,6 @@ class AgentIdentity:
         self._credentials = None
 
     ## Channel management
-
-    def create_mailbox(
-        self,
-        *,
-        display_name: str | None = None,
-        email_local_part: str | None = None,
-        sending_domain_id: str | None = _UNSET,  # type: ignore[assignment]
-    ) -> IdentityMailbox:
-        """Create a new mailbox and link it to this identity.
-
-        Args:
-            display_name: Optional human-readable sender name.
-            email_local_part: Optional requested local part.
-            sending_domain_id: Optional sending-domain selector by row id.
-                Omit to inherit the org default; pass ``None`` to force the
-                platform default; pass a verified domain's id to bind.
-        """
-        create_kwargs: dict[str, Any] = {
-            "agent_handle": self.agent_handle,
-            "display_name": display_name,
-            "email_local_part": email_local_part,
-        }
-        if sending_domain_id is not _UNSET:
-            create_kwargs["sending_domain_id"] = sending_domain_id
-        mailbox = self._inkbox._mailboxes.create(**create_kwargs)
-        linked = IdentityMailbox(
-            id=mailbox.id,
-            email_address=mailbox.email_address,
-            sending_domain=mailbox.sending_domain,
-            display_name=mailbox.display_name,
-            filter_mode=mailbox.filter_mode,
-            created_at=mailbox.created_at,
-            updated_at=mailbox.updated_at,
-            agent_identity_id=mailbox.agent_identity_id,
-            filter_mode_change_notice=mailbox.filter_mode_change_notice,
-        )
-        self._mailbox = linked
-        self._data.email_address = mailbox.email_address
-        return linked
-
-    def assign_mailbox(self, mailbox_id: str) -> IdentityMailbox:
-        """Link an existing mailbox to this identity.
-
-        Args:
-            mailbox_id: UUID of the mailbox to link. Obtain via
-                ``inkbox.mailboxes.list()`` or ``inkbox.mailboxes.get()``.
-
-        Returns:
-            The linked mailbox.
-        """
-        data = self._inkbox._ids_resource.assign_mailbox(
-            self.agent_handle, mailbox_id=mailbox_id
-        )
-        self._mailbox = data.mailbox
-        self._data = data
-        return self._mailbox  # type: ignore[return-value]
-
-    def unlink_mailbox(self) -> None:
-        """Unlink this identity's mailbox (does not delete the mailbox)."""
-        self._require_mailbox()
-        self._inkbox._ids_resource.unlink_mailbox(self.agent_handle)
-        self._mailbox = None
 
     def provision_phone_number(
         self, *, type: str = "toll_free", state: str | None = None
@@ -739,24 +698,49 @@ class AgentIdentity:
         self,
         *,
         new_handle: str | None = None,
+        display_name: Any = _UNSET,
+        description: Any = _UNSET,
+        status: str | None = None,
     ) -> None:
-        """Update this identity's handle.
+        """Update this identity's handle, display name, description,
+        and/or status.
+
+        Only provided fields are applied; omitted fields are left
+        unchanged. For ``display_name`` and ``description``, explicit
+        ``None`` clears the column; omitting the keyword argument leaves
+        it untouched.
 
         Args:
             new_handle: New agent handle.
+            display_name: New display name, or ``None`` to clear.
+            description: New description, or ``None`` to clear.
+            status: ``"active"`` or ``"paused"``. Use :meth:`delete` for
+                tombstoning; ``"deleted"`` is rejected here.
         """
+        update_kwargs: dict[str, Any] = {}
+        if new_handle is not None:
+            update_kwargs["new_handle"] = new_handle
+        if display_name is not _UNSET:
+            update_kwargs["display_name"] = display_name
+        if description is not _UNSET:
+            update_kwargs["description"] = description
+        if status is not None:
+            update_kwargs["status"] = status
         result = self._inkbox._ids_resource.update(
-            self.agent_handle, new_handle=new_handle
+            self.agent_handle, **update_kwargs,
         )
         self._data = _AgentIdentityData(
             id=result.id,
             organization_id=result.organization_id,
             agent_handle=result.agent_handle,
+            display_name=result.display_name,
+            description=result.description,
             email_address=result.email_address,
             created_at=result.created_at,
             updated_at=result.updated_at,
             mailbox=self._mailbox,
             phone_number=self._phone_number,
+            tunnel=self._tunnel,
         )
 
     def refresh(self) -> AgentIdentity:
@@ -773,11 +757,18 @@ class AgentIdentity:
         self._data = data
         self._mailbox = data.mailbox
         self._phone_number = data.phone_number
+        self._tunnel = data.tunnel
         self._credentials = None
         return self
 
     def delete(self) -> None:
-        """Delete this identity (unlinks channels without deleting them)."""
+        """Delete this identity.
+
+        Cascades: flips the linked mailbox to ``deleted``, force-finalizes
+        the linked tunnel to ``deleted``, revokes any identity-scoped
+        API keys, and unassigns (but does not delete) any linked phone
+        number. The handle is reclaimable immediately on commit.
+        """
         self._inkbox._ids_resource.delete(self.agent_handle)
 
     ## Internal guards
@@ -785,8 +776,8 @@ class AgentIdentity:
     def _require_mailbox(self) -> None:
         if not self._mailbox:
             raise InkboxError(
-                f"Identity '{self.agent_handle}' has no mailbox assigned. "
-                "Call identity.create_mailbox() or identity.assign_mailbox() first."
+                f"Identity '{self.agent_handle}' has no mailbox — "
+                "this should only be reachable on a tombstoned identity."
             )
 
     def _require_phone(self) -> None:

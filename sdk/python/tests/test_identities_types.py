@@ -57,7 +57,6 @@ class TestIdentityMailboxParsing:
 
         assert isinstance(m.id, UUID)
         assert m.email_address == "sales-agent@inkbox.ai"
-        assert m.display_name == "Sales Agent"
         assert m.agent_identity_id == UUID("eeee5555-0000-0000-0000-000000000001")
         assert isinstance(m.created_at, datetime)
         assert isinstance(m.updated_at, datetime)
@@ -74,9 +73,13 @@ class TestIdentityMailboxParsing:
 
 
 class TestIdentityMailboxCreateOptionsToWire:
-    def test_omits_sending_domain_when_unset(self):
-        opts = IdentityMailboxCreateOptions(display_name="x")
-        assert opts.to_wire() == {"display_name": "x"}
+    def test_empty_when_unset(self):
+        opts = IdentityMailboxCreateOptions()
+        assert opts.to_wire() == {}
+
+    def test_email_local_part_when_set(self):
+        opts = IdentityMailboxCreateOptions(email_local_part="alice")
+        assert opts.to_wire() == {"email_local_part": "alice"}
 
     def test_includes_null_when_explicit(self):
         opts = IdentityMailboxCreateOptions(sending_domain=None)

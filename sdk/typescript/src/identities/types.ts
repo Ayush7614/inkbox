@@ -12,9 +12,10 @@ import {
   parseFilterModeChangeNotice,
 } from "../mail/types.js";
 import { SmsStatus } from "../phone/types.js";
+import type { RawTunnel, TLSMode, Tunnel } from "../tunnels/types.js";
+import { parseTunnel } from "../tunnels/types.js";
 
 export interface IdentityMailboxCreateOptions {
-  displayName?: string;
   emailLocalPart?: string;
   /**
    * Optional sending-domain selector by **bare domain name** (not an id).
@@ -34,18 +35,29 @@ export interface IdentityPhoneNumberCreateOptions {
   incomingTextWebhookUrl?: string;
 }
 
+export interface IdentityTunnelCreateOptions {
+  tlsMode?: TLSMode | "edge" | "passthrough";
+  description?: string | null;
+}
+
 export interface CreateIdentityOptions {
-  createMailbox?: boolean;
+  /** Identity-level human-readable name. Defaults server-side to `agentHandle`. */
   displayName?: string;
+  /**
+   * Free-form org-internal description. Pass a string to set, `null` to
+   * leave the column null. Never surfaces in outbound mail / public payloads.
+   */
+  description?: string | null;
   emailLocalPart?: string;
   /**
    * Optional sending-domain selector by **bare domain name**. Presence
-   * (including explicit `null`) implies mailbox creation, just like
-   * `displayName` and `emailLocalPart`. Omit to inherit the org's default,
-   * `null` to force the platform default, or a verified domain name to
-   * bind to that domain.
+   * (including explicit `null`) configures the mailbox's sending domain.
+   * Omit to inherit the org's default, `null` to force the platform default,
+   * or a verified domain name to bind to that domain.
    */
   sendingDomain?: string | null;
+  /** Optional nested tunnel spec. Server picks edge / no-description defaults if omitted. */
+  tunnel?: IdentityTunnelCreateOptions;
   phoneNumber?: IdentityPhoneNumberCreateOptions;
   vaultSecretIds?: string | string[] | "*" | "all";
 }
@@ -58,11 +70,10 @@ export interface IdentityMailbox {
    * Either the platform default or a verified custom domain.
    */
   sendingDomain: string;
-  displayName: string | null;
   filterMode: FilterMode;
   /**
-   * UUID of the owning agent identity, or `null` if standalone. On the
-   * embedded variant this always equals the owning identity's ID.
+   * UUID of the owning agent identity. Non-null for live customer
+   * mailboxes (1:1 invariant); null only on tombstones and system mailboxes.
    */
   agentIdentityId: string | null;
   createdAt: Date;
@@ -97,11 +108,13 @@ export interface IdentityPhoneNumber {
   filterModeChangeNotice: FilterModeChangeNotice | null;
 }
 
-/** Lightweight identity returned by list and update endpoints. */
+/** Lightweight identity returned by list endpoints. */
 export interface AgentIdentitySummary {
   id: string;
   organizationId: string;
   agentHandle: string;
+  displayName: string | null;
+  description: string | null;
   /** Email address assigned at creation time. Always trust this value — do not derive it from `agentHandle`. */
   emailAddress: string | null;
   createdAt: Date;
@@ -110,10 +123,12 @@ export interface AgentIdentitySummary {
 
 /** @internal Full identity data with channels — users interact with AgentIdentity (the class) instead. */
 export interface _AgentIdentityData extends AgentIdentitySummary {
-  /** Mailbox assigned to this identity, or null if unlinked. */
+  /** Mailbox assigned to this identity. Non-null for live identities (1:1 invariant); null on tombstones. */
   mailbox: IdentityMailbox | null;
   /** Phone number assigned to this identity, or null if unlinked. */
   phoneNumber: IdentityPhoneNumber | null;
+  /** Tunnel assigned to this identity. Non-null for live identities (1:1 invariant); null on tombstones. */
+  tunnel: Tunnel | null;
 }
 
 // ---- internal raw API shapes (snake_case from JSON) ----
@@ -122,7 +137,6 @@ export interface RawIdentityMailbox {
   id: string;
   email_address: string;
   sending_domain?: string;
-  display_name: string | null;
   filter_mode?: string;
   agent_identity_id?: string | null;
   filter_mode_change_notice?: RawFilterModeChangeNotice | null;
@@ -153,6 +167,8 @@ export interface RawAgentIdentitySummary {
   id: string;
   organization_id: string;
   agent_handle: string;
+  display_name: string | null;
+  description: string | null;
   email_address: string | null;
   created_at: string;
   updated_at: string;
@@ -161,6 +177,7 @@ export interface RawAgentIdentitySummary {
 export interface RawAgentIdentityData extends RawAgentIdentitySummary {
   mailbox: RawIdentityMailbox | null;
   phone_number: RawIdentityPhoneNumber | null;
+  tunnel: RawTunnel | null;
 }
 
 // ---- parsers ----
@@ -170,7 +187,6 @@ export function parseIdentityMailbox(r: RawIdentityMailbox): IdentityMailbox {
     id: r.id,
     emailAddress: r.email_address,
     sendingDomain: r.sending_domain ?? r.email_address.split("@")[1] ?? "",
-    displayName: r.display_name,
     filterMode: (r.filter_mode as FilterMode) ?? FilterModeEnum.BLACKLIST,
     agentIdentityId: r.agent_identity_id ?? null,
     createdAt: new Date(r.created_at),
@@ -209,6 +225,8 @@ export function parseAgentIdentitySummary(r: RawAgentIdentitySummary): AgentIden
     id: r.id,
     organizationId: r.organization_id,
     agentHandle: r.agent_handle,
+    displayName: r.display_name ?? null,
+    description: r.description ?? null,
     emailAddress: r.email_address,
     createdAt: new Date(r.created_at),
     updatedAt: new Date(r.updated_at),
@@ -220,6 +238,7 @@ export function parseAgentIdentityData(r: RawAgentIdentityData): _AgentIdentityD
     ...parseAgentIdentitySummary(r),
     mailbox: r.mailbox ? parseIdentityMailbox(r.mailbox) : null,
     phoneNumber: r.phone_number ? parseIdentityPhoneNumber(r.phone_number) : null,
+    tunnel: r.tunnel ? parseTunnel(r.tunnel) : null,
   };
 }
 
@@ -227,9 +246,17 @@ export function identityMailboxCreateOptionsToWire(
   options: IdentityMailboxCreateOptions,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {};
-  if (options.displayName !== undefined) body["display_name"] = options.displayName;
   if (options.emailLocalPart !== undefined) body["email_local_part"] = options.emailLocalPart;
   if ("sendingDomain" in options) body["sending_domain"] = options.sendingDomain;
+  return body;
+}
+
+export function identityTunnelCreateOptionsToWire(
+  options: IdentityTunnelCreateOptions,
+): Record<string, unknown> {
+  const body: Record<string, unknown> = {};
+  if (options.tlsMode !== undefined) body["tls_mode"] = options.tlsMode;
+  if ("description" in options) body["description"] = options.description;
   return body;
 }
 

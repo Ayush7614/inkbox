@@ -48,7 +48,6 @@ describe("parseIdentityMailbox", () => {
     const m = parseIdentityMailbox(RAW_IDENTITY_MAILBOX);
     expect(m.id).toBe(RAW_IDENTITY_MAILBOX.id);
     expect(m.emailAddress).toBe("sales-agent@inkbox.ai");
-    expect(m.displayName).toBe("Sales Agent");
     expect(m.agentIdentityId).toBe("eeee5555-0000-0000-0000-000000000001");
     expect(m.createdAt).toBeInstanceOf(Date);
     expect(m.updatedAt).toBeInstanceOf(Date);
@@ -69,9 +68,13 @@ describe("parseIdentityMailbox", () => {
 });
 
 describe("identityMailboxCreateOptionsToWire", () => {
-  it("omits sending_domain when option is omitted", () => {
-    expect(identityMailboxCreateOptionsToWire({ displayName: "x" })).toEqual({
-      display_name: "x",
+  it("returns an empty object when nothing is set", () => {
+    expect(identityMailboxCreateOptionsToWire({})).toEqual({});
+  });
+
+  it("includes email_local_part when set", () => {
+    expect(identityMailboxCreateOptionsToWire({ emailLocalPart: "alice" })).toEqual({
+      email_local_part: "alice",
     });
   });
 

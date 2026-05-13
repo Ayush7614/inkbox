@@ -42,43 +42,57 @@ describe("CLI lifecycle", { timeout: 300_000 }, () => {
     const emptyList = inkboxJson<unknown[]>("identity list", cliOpts);
     expect(emptyList).toHaveLength(0);
 
-    // ── create identities ─────────────────────────────────────
+    // ── create identities (mailbox + tunnel atomic) ───────────
     logStep(config, "create identity alpha");
-    const alphaCreate = inkboxJson<{ agentHandle: string; id: string }>(
-      "identity create alpha",
+    const alphaCreate = inkboxJson<{
+      agentHandle: string;
+      id: string;
+      mailbox: string;
+      tunnel: { id: string; publicHost: string; tlsMode: string; status: string };
+    }>(
+      "identity create alpha --description 'alpha cli-integration'",
       cliOpts,
     );
     expect(alphaCreate.agentHandle).toBe("alpha");
-
-    logStep(config, "create mailbox for alpha");
-    const alphaMb = inkboxJson<{ emailAddress: string }>(
-      "mailbox create -i alpha",
-      cliOpts,
-    );
-    expect(alphaMb.emailAddress).toBeTruthy();
+    expect(alphaCreate.mailbox).toBeTruthy();
+    expect(alphaCreate.tunnel).not.toBeNull();
+    expect(alphaCreate.tunnel.publicHost).toMatch(/^alpha\..+\.inkboxwire\.com$/);
+    expect(alphaCreate.tunnel.tlsMode).toBe("edge");
+    const alphaMb = { emailAddress: alphaCreate.mailbox };
 
     logStep(config, "create identity bravo");
-    inkboxJson("identity create bravo", cliOpts);
-
-    logStep(config, "create mailbox for bravo");
-    const bravoMb = inkboxJson<{ emailAddress: string }>(
-      "mailbox create -i bravo",
+    const bravoCreate = inkboxJson<{ mailbox: string; tunnel: { publicHost: string } }>(
+      "identity create bravo",
       cliOpts,
     );
-    expect(bravoMb.emailAddress).toBeTruthy();
+    expect(bravoCreate.mailbox).toBeTruthy();
+    const bravoMb = { emailAddress: bravoCreate.mailbox };
 
     logStep(config, "list identities shows 2");
     const identities = inkboxJson<unknown[]>("identity list", cliOpts);
     expect(identities).toHaveLength(2);
 
-    // ── get identity ──────────────────────────────────────────
-    logStep(config, "get identity alpha");
-    const alphaGet = inkboxJson<{ agentHandle: string; mailbox: string }>(
-      "identity get alpha",
+    // ── tunnel get (smoke) ────────────────────────────────────
+    logStep(config, "tunnel get alpha");
+    const alphaTunnel = inkboxJson<{ tunnelName: string; tlsMode: string }>(
+      "tunnel get alpha",
       cliOpts,
     );
+    expect(alphaTunnel.tunnelName).toBe("alpha");
+    expect(alphaTunnel.tlsMode).toBe("edge");
+
+    // ── get identity ──────────────────────────────────────────
+    logStep(config, "get identity alpha");
+    const alphaGet = inkboxJson<{
+      agentHandle: string;
+      mailbox: string;
+      description: string | null;
+      tunnel: { publicHost: string };
+    }>("identity get alpha", cliOpts);
     expect(alphaGet.agentHandle).toBe("alpha");
     expect(alphaGet.mailbox).toBe(alphaMb.emailAddress);
+    expect(alphaGet.description).toBe("alpha cli-integration");
+    expect(alphaGet.tunnel.publicHost).toBe(alphaCreate.tunnel.publicHost);
 
     // ── send email alpha → bravo ──────────────────────────────
     const subject = `cli-integration-${config.environment}`;
@@ -165,7 +179,7 @@ describe("CLI lifecycle", { timeout: 300_000 }, () => {
     const signingKey = inkboxJson<{ signingKey: string }>("signing-key create", cliOpts);
     expect(signingKey.signingKey).toBeTruthy();
 
-    // ── cleanup: delete identities ────────────────────────────
+    // ── cleanup: delete identities (cascades to mailbox + tunnel) ─
     logStep(config, "delete identities");
     inkbox("identity delete alpha", cliOpts);
     inkbox("identity delete bravo", cliOpts);
@@ -173,5 +187,10 @@ describe("CLI lifecycle", { timeout: 300_000 }, () => {
     logStep(config, "verify empty after cleanup");
     const finalList = inkboxJson<unknown[]>("identity list", cliOpts);
     expect(finalList).toHaveLength(0);
+
+    // ── immediate re-create (no 24h grace) ────────────────────
+    logStep(config, "re-create 'alpha' immediately");
+    inkboxJson("identity create alpha", cliOpts);
+    inkbox("identity delete alpha", cliOpts);
   });
 });

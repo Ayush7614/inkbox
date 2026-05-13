@@ -41,26 +41,48 @@ describe("TypeScript SDK lifecycle", { timeout: 300_000 }, () => {
     expect(empty).toHaveLength(0);
 
     // ── create identities ─────────────────────────────────────
-    logStep(config, "create identity alpha with mailbox");
-    const alpha = await inkbox.createIdentity("alpha", { createMailbox: true });
+    logStep(config, "create identity alpha (mailbox + tunnel provisioned atomically)");
+    const alpha = await inkbox.createIdentity("alpha", {
+      description: "alpha integration-test identity",
+    });
     expect(alpha.agentHandle).toBe("alpha");
     expect(alpha.mailbox).not.toBeNull();
     expect(alpha.emailAddress).toBeTruthy();
+    expect(alpha.tunnel).not.toBeNull();
+    expect(alpha.tunnel!.publicHost).toMatch(/^alpha\..+\.inkboxwire\.com$/);
+    expect(alpha.description).toBe("alpha integration-test identity");
 
-    logStep(config, "create identity bravo with mailbox");
-    const bravo = await inkbox.createIdentity("bravo", { createMailbox: true });
+    logStep(config, "create identity bravo");
+    const bravo = await inkbox.createIdentity("bravo");
     expect(bravo.agentHandle).toBe("bravo");
     expect(bravo.mailbox).not.toBeNull();
+    expect(bravo.tunnel).not.toBeNull();
 
     logStep(config, "list identities shows 2");
     const identities = await inkbox.listIdentities();
     expect(identities).toHaveLength(2);
+
+    // ── tunnel get (smoke) ────────────────────────────────────
+    logStep(config, "fetch alpha's tunnel from the tunnel surface");
+    const alphaTunnel = await inkbox.tunnels.get(alpha.tunnel!.id);
+    expect(alphaTunnel.tunnelName).toBe("alpha");
+    expect(alphaTunnel.tlsMode).toBe("edge");
 
     // ── get identity ──────────────────────────────────────────
     logStep(config, "get identity alpha");
     const alphaFetched = await inkbox.getIdentity("alpha");
     expect(alphaFetched.id).toBe(alpha.id);
     expect(alphaFetched.emailAddress).toBe(alpha.emailAddress);
+    expect(alphaFetched.tunnel?.id).toBe(alpha.tunnel!.id);
+    expect(alphaFetched.description).toBe("alpha integration-test identity");
+
+    // ── update description: omit vs explicit-null semantics ───
+    logStep(config, "update alpha description (set)");
+    await alphaFetched.update({ description: "alpha updated" });
+    expect((await inkbox.getIdentity("alpha")).description).toBe("alpha updated");
+    logStep(config, "update alpha description (clear via explicit null)");
+    await alphaFetched.update({ description: null });
+    expect((await inkbox.getIdentity("alpha")).description).toBeNull();
 
     // ── send email alpha → bravo ──────────────────────────────
     const subject = `sdk-integration-ts-${config.environment}`;
@@ -219,12 +241,19 @@ describe("TypeScript SDK lifecycle", { timeout: 300_000 }, () => {
     expect(signingKey.createdAt).toBeTruthy();
 
     // ── cleanup: delete identities ────────────────────────────
-    logStep(config, "delete identities");
+    logStep(config, "delete identities (cascades to mailbox + tunnel)");
     await alpha.delete();
     await bravo.delete();
 
     logStep(config, "verify empty after cleanup");
     const final = await inkbox.listIdentities();
     expect(final).toHaveLength(0);
+
+    // ── immediate re-create of the same handle (no 24h grace) ─
+    logStep(config, "re-create 'alpha' immediately");
+    const alphaAgain = await inkbox.createIdentity("alpha");
+    expect(alphaAgain.agentHandle).toBe("alpha");
+    expect(alphaAgain.tunnel).not.toBeNull();
+    await alphaAgain.delete();
   });
 });

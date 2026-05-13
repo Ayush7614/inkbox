@@ -6,7 +6,7 @@ Inkbox — org-level entry point for all Inkbox APIs.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -26,7 +26,8 @@ from inkbox.agent_signup.types import (
 )
 from inkbox.exceptions import InkboxAPIError
 from inkbox.identities.resources.identities import IdentitiesResource
-from inkbox.identities.types import (
+from inkbox.identities.types import (  # noqa: I001
+    IdentityTunnelCreateOptions,
     AgentIdentitySummary,
     IdentityMailboxCreateOptions,
     IdentityPhoneNumberCreateOptions,
@@ -111,6 +112,10 @@ class Inkbox:
         _api_base = f"{base_url.rstrip('/')}/api"
         _api_root = f"{base_url.rstrip('/')}/api/v1"
         _cookie_jar = CookieJar()
+
+        # Held for the tunnel-agent runtime, which authenticates the
+        # data-plane hello with the same key used for the control plane.
+        self._api_key = api_key
 
         self._mail_http = HttpTransport(
             api_key=api_key,
@@ -275,7 +280,7 @@ class Inkbox:
 
     @property
     def tunnels(self) -> TunnelsResource:
-        """Tunnels (list, get, create, update, delete, restore, rotate_secret, sign_csr)."""
+        """Tunnels (list, get, update, sign_csr). Tunnel lifecycle is owned by identity-create / identity-delete."""
         return self._tunnels
 
     @property
@@ -289,62 +294,60 @@ class Inkbox:
         self,
         agent_handle: str,
         *,
-        create_mailbox: bool = False,
         display_name: str | None = None,
+        description: Any = _UNSET,
         email_local_part: str | None = None,
         sending_domain: str | None = _UNSET,  # type: ignore[assignment]
+        tunnel: "IdentityTunnelCreateOptions | None" = None,
         phone_number: IdentityPhoneNumberCreateOptions | None = None,
         vault_secret_ids: UUID | str | list[UUID | str] | Literal["*", "all"] | None = None,
     ) -> AgentIdentity:
         """
-        Create a new agent identity.
+        Create a new agent identity. Atomically provisions the linked
+        mailbox and tunnel as part of the same request.
 
         Args:
-            agent_handle: Unique handle for this identity (e.g. ``"sales-bot"``).
-            create_mailbox: Whether to create and link a mailbox in the same
-                request. This is also implied when ``display_name``,
-                ``email_local_part``, or ``sending_domain`` is provided.
-            display_name: Optional human-readable mailbox name.
+            agent_handle: Unique handle, globally unique across all orgs
+                (the handle shares its namespace with tunnel names).
+            display_name: Identity-level human-readable name. Defaults
+                server-side to ``agent_handle``.
+            description: Free-form org-internal description. Pass
+                ``None`` to leave the column null; omit to defer to the
+                server default. Never surfaces in outbound mail.
             email_local_part: Optional requested mailbox local part.
-            sending_domain: Optional sending-domain selector by **bare domain
-                name**. Presence (including explicit ``None``) implies mailbox
-                creation. Leave at ``_UNSET`` to inherit the org default;
-                pass ``None`` to force the platform default; pass a verified
-                custom-domain name to bind.
-            phone_number: Optional phone-number provisioning payload to create
-                and link a number in the same request.
-            vault_secret_ids: Optional vault secret selection to attach to the
-                new identity. Use ``"*"``, ``"all"``, a single UUID/string, or
-                a list of UUIDs/strings.
+                On the platform domain the server forces it to the
+                handle; only meaningful on a custom sending domain.
+            sending_domain: Optional sending-domain selector by **bare
+                domain name**. Leave at ``_UNSET`` to inherit the org
+                default; pass ``None`` to force the platform default;
+                pass a verified custom-domain name to bind.
+            tunnel: Optional nested tunnel spec (tls_mode + description).
+                Defaults: edge TLS, no description.
+            phone_number: Optional phone-number provisioning payload.
+            vault_secret_ids: Optional vault secret selection to attach.
 
         Returns:
-            The created :class:`AgentIdentity`.
+            The created :class:`AgentIdentity` with ``mailbox`` and
+            ``tunnel`` populated from the atomic create response.
         """
         sending_domain_provided = sending_domain is not _UNSET
-        wants_mailbox = (
-            create_mailbox
-            or display_name is not None
-            or email_local_part is not None
-            or sending_domain_provided
+        mailbox_kwargs: dict[str, Any] = {}
+        if email_local_part is not None:
+            mailbox_kwargs["email_local_part"] = email_local_part
+        if sending_domain_provided:
+            mailbox_kwargs["sending_domain"] = sending_domain
+        mailbox: IdentityMailboxCreateOptions | None = (
+            IdentityMailboxCreateOptions(**mailbox_kwargs) if mailbox_kwargs else None
         )
-        mailbox: IdentityMailboxCreateOptions | None = None
-        if wants_mailbox:
-            kwargs: dict[str, str | None] = {
-                "display_name": display_name,
-                "email_local_part": email_local_part,
-            }
-            if sending_domain_provided:
-                # `sending_domain` is now narrowed to ``str | None`` (the
-                # _UNSET sentinel was filtered out above).
-                kwargs["sending_domain"] = sending_domain  # type: ignore[assignment]
-            mailbox = IdentityMailboxCreateOptions(**kwargs)
-        self._ids_resource.create(
+        data = self._ids_resource.create(
             agent_handle=agent_handle,
+            display_name=display_name,
+            description=description,
             mailbox=mailbox,
+            tunnel=tunnel,
             phone_number=phone_number,
             vault_secret_ids=vault_secret_ids,
         )
-        data = self._ids_resource.get(agent_handle)
         return AgentIdentity(data, self)
 
     def get_identity(self, agent_handle: str) -> AgentIdentity:
