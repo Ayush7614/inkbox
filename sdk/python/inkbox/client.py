@@ -322,8 +322,8 @@ class Inkbox:
                 domain name**. Leave at ``_UNSET`` to inherit the org
                 default; pass ``None`` to force the platform default;
                 pass a verified custom-domain name to bind.
-            tunnel: Optional nested tunnel spec (tls_mode + description).
-                Defaults: edge TLS, no description.
+            tunnel: Optional nested tunnel spec (tls_mode only).
+                Defaults to edge TLS.
             phone_number: Optional phone-number provisioning payload.
             vault_secret_ids: Optional vault secret selection to attach.
 

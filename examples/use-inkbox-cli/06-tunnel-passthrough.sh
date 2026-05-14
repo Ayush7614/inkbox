@@ -33,8 +33,7 @@ trap cleanup EXIT
 # --- workflow ---
 echo "=> Creating identity '$HANDLE' with tls_mode=passthrough"
 CREATE_JSON=$(inkbox --json identity create "$HANDLE" \
-  --tls-mode passthrough \
-  --tunnel-description "passthrough demo")
+  --tls-mode passthrough)
 TUNNEL_ID=$(echo "$CREATE_JSON" | jq -r '.tunnel.id')
 PUBLIC_HOST=$(echo "$CREATE_JSON" | jq -r '.tunnel.publicHost')
 STATUS=$(echo "$CREATE_JSON" | jq -r '.tunnel.status')

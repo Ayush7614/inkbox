@@ -23,7 +23,6 @@ function serverTunnel(overrides: Record<string, unknown> = {}) {
     id: "11111111-1111-1111-1111-111111111111",
     organization_id: "org_test",
     tunnel_name: "my-agent",
-    description: null,
     tls_mode: "edge",
     cert_pem: null,
     cert_fingerprint_sha256: null,
@@ -144,14 +143,6 @@ describe("TunnelsResource", () => {
     const args = vi.mocked(fetch).mock.calls[0];
     const init = args[1] as RequestInit;
     expect(JSON.parse(init.body as string)).toEqual({});
-  });
-
-  it("update with explicit null clears description", async () => {
-    vi.mocked(fetch).mockResolvedValue(makeResponse(200, serverTunnel()));
-    const t = tunnels();
-    await t.update("abc", { description: null });
-    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
-    expect(JSON.parse(init.body as string)).toEqual({ description: null });
   });
 
   it("update with metadata={} clears metadata", async () => {

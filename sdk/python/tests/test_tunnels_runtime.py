@@ -49,7 +49,6 @@ def _make_bundle() -> TunnelBundle:
             id=UUID("11111111-1111-1111-1111-111111111111"),
             organization_id="org",
             tunnel_name="my-agent",
-            description=None,
             tls_mode=TLSMode.EDGE,
             cert_pem=None,
             cert_fingerprint_sha256=None,

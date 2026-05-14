@@ -285,8 +285,8 @@ export class Inkbox {
    * @param options.sendingDomain - Optional sending-domain selector (bare
    *   domain name). Omit to inherit the org default; pass `null` to force
    *   the platform default; pass a verified custom-domain name to bind.
-   * @param options.tunnel - Optional nested tunnel spec (TLS mode +
-   *   description). Defaults: edge TLS, no description.
+   * @param options.tunnel - Optional nested tunnel spec (tlsMode only).
+   *   Defaults to edge TLS.
    * @param options.phoneNumber - Optional phone-number provisioning payload.
    * @param options.vaultSecretIds - Optional vault secret selection to attach
    *   to the new identity.

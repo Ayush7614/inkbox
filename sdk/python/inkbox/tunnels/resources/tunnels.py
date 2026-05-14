@@ -89,22 +89,18 @@ class TunnelsResource:
         self,
         tunnel_id: UUID | str,
         *,
-        description: str | None = _UNSET,  # type: ignore[assignment]
         metadata: dict[str, Any] | None = _UNSET,  # type: ignore[assignment]
     ) -> Tunnel:
-        """Update a tunnel.
+        """Update a tunnel's metadata.
 
-        Pass only the fields you want to change; omitted fields are left
-        as-is.
+        ``metadata`` is the only mutable field on the tunnel; other
+        attributes are derived from the owning identity.
 
-        - ``description=None`` clears the description.
         - ``metadata={}`` and ``metadata=None`` both clear to ``{}``
           (the server's column is non-nullable; both forms collapse on
           the wire).
         """
         body: dict[str, Any] = {}
-        if description is not _UNSET:
-            body["description"] = description
         if metadata is not _UNSET:
             if metadata is not None and not isinstance(metadata, dict):
                 raise ValueError("metadata must be a dict or None")

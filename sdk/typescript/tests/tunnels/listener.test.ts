@@ -22,7 +22,6 @@ function fakeTunnel(): Tunnel {
     id: "11111111-1111-1111-1111-111111111111",
     organizationId: "org_test",
     tunnelName: "my-agent",
-    description: null,
     tlsMode: TLSMode.EDGE,
     certPem: null,
     certFingerprintSha256: null,

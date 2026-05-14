@@ -70,7 +70,6 @@ class Tunnel:
     id: UUID
     organization_id: str
     tunnel_name: str
-    description: str | None
     tls_mode: TLSMode
     cert_pem: str | None
     cert_fingerprint_sha256: str | None
@@ -108,7 +107,6 @@ class Tunnel:
             id=UUID(str(data["id"])),
             organization_id=str(data["organization_id"]),
             tunnel_name=str(data["tunnel_name"]),
-            description=data.get("description"),
             tls_mode=TLSMode(str(data["tls_mode"])),
             cert_pem=data.get("cert_pem"),
             cert_fingerprint_sha256=data.get("cert_fingerprint_sha256"),

@@ -83,7 +83,6 @@ inkbox identity create <handle>              # Provisions identity + mailbox + t
   --sending-domain <name>                    #   Bind mailbox to a verified custom domain (bare name)
   --platform-domain                          #   Force the platform sending domain (mutually exclusive)
   --tls-mode <mode>                          #   edge (default) or passthrough — fixed at create time
-  --tunnel-description <text>                #   Tunnel-level description
 inkbox identity delete <handle>              # Cascades to mailbox + tunnel; revokes scoped API keys
 inkbox identity update <handle>              # Update an identity
   --new-handle <handle>                      #   New handle
@@ -290,8 +289,7 @@ rotate-secret surface.
 ```bash
 inkbox tunnel list                                          # List org tunnels
 inkbox tunnel get <id-or-handle>                            # By UUID or agent handle
-inkbox tunnel update <id>                                   # Edit description/metadata
-  --description <text>                                      #   "" to clear
+inkbox tunnel update <id>                                   # Edit metadata
   --metadata <json>                                         #   JSON object; "{}" to clear
 inkbox tunnel sign-csr <id>                                 # Passthrough cert signing
   --csr <path-or-pem>                                       #   CSR file path OR inline PEM

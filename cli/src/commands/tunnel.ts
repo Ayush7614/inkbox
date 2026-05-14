@@ -65,7 +65,6 @@ export function registerTunnelCommands(program: Command): void {
             zone: t.zone,
             tlsMode: t.tlsMode,
             status: t.status,
-            description: t.description,
             currentlyConnected: t.currentlyConnected,
             lastConnectedAt: t.lastConnectedAt,
             metadata: t.metadata,
@@ -80,9 +79,8 @@ export function registerTunnelCommands(program: Command): void {
   tunnel
     .command("update <id>")
     .description(
-      "Update a tunnel's description and/or metadata. Pass --description '' to clear.",
+      "Update a tunnel's metadata. Pass --metadata '{}' to clear.",
     )
-    .option("--description <text>", "New description (pass '' to clear)")
     .option(
       "--metadata <json>",
       "New metadata as a JSON object (pass '{}' to clear)",
@@ -91,17 +89,13 @@ export function registerTunnelCommands(program: Command): void {
       withErrorHandler(async function (
         this: Command,
         tunnelId: string,
-        cmdOpts: { description?: string; metadata?: string },
+        cmdOpts: { metadata?: string },
       ) {
         const opts = getGlobalOpts(this);
         const inkbox = createClient(opts);
         const body: {
-          description?: string | null;
           metadata?: Record<string, unknown> | null;
         } = {};
-        if (cmdOpts.description !== undefined) {
-          body.description = cmdOpts.description === "" ? null : cmdOpts.description;
-        }
         if (cmdOpts.metadata !== undefined) {
           let parsed: unknown;
           try {
@@ -119,7 +113,6 @@ export function registerTunnelCommands(program: Command): void {
           {
             id: t.id,
             tunnelName: t.tunnelName,
-            description: t.description,
             metadata: t.metadata,
           },
           { json: !!opts.json },

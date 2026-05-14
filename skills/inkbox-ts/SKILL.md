@@ -700,7 +700,6 @@ Reads + edit:
 await inkbox.tunnels.list();
 await inkbox.tunnels.get("tunnel-uuid");
 await inkbox.tunnels.update("tunnel-uuid", {
-  description: "Sales-outreach agent",
   metadata: { team: "gtm" },
 });
 // Passthrough only:

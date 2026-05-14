@@ -87,10 +87,6 @@ export function registerIdentityCommands(program: Command): void {
       "--tls-mode <mode>",
       "Tunnel TLS mode: edge (default) or passthrough.",
     )
-    .option(
-      "--tunnel-description <text>",
-      "Free-form description for the provisioned tunnel (distinct from --description).",
-    )
     .action(
       withErrorHandler(async function (
         this: Command,
@@ -102,7 +98,6 @@ export function registerIdentityCommands(program: Command): void {
           sendingDomain?: string;
           platformDomain?: boolean;
           tlsMode?: string;
-          tunnelDescription?: string;
         },
       ) {
         if (cmdOpts.sendingDomain !== undefined && cmdOpts.platformDomain) {
@@ -118,7 +113,7 @@ export function registerIdentityCommands(program: Command): void {
           description?: string | null;
           emailLocalPart?: string;
           sendingDomain?: string | null;
-          tunnel?: { tlsMode?: "edge" | "passthrough"; description?: string | null };
+          tunnel?: { tlsMode?: "edge" | "passthrough" };
         } = {};
         if (cmdOpts.displayName !== undefined) createOpts.displayName = cmdOpts.displayName;
         if (cmdOpts.description !== undefined) createOpts.description = cmdOpts.description;
@@ -128,11 +123,8 @@ export function registerIdentityCommands(program: Command): void {
         } else if (cmdOpts.platformDomain) {
           createOpts.sendingDomain = null;
         }
-        if (cmdOpts.tlsMode !== undefined || cmdOpts.tunnelDescription !== undefined) {
-          const tunnel: { tlsMode?: "edge" | "passthrough"; description?: string | null } = {};
-          if (cmdOpts.tlsMode !== undefined) tunnel.tlsMode = cmdOpts.tlsMode as "edge" | "passthrough";
-          if (cmdOpts.tunnelDescription !== undefined) tunnel.description = cmdOpts.tunnelDescription;
-          createOpts.tunnel = tunnel;
+        if (cmdOpts.tlsMode !== undefined) {
+          createOpts.tunnel = { tlsMode: cmdOpts.tlsMode as "edge" | "passthrough" };
         }
         const id = await inkbox.createIdentity(handle, createOpts);
         output(

@@ -666,9 +666,8 @@ Reads + edit:
 ```python
 inkbox.tunnels.list()                       # list[Tunnel]
 inkbox.tunnels.get("tunnel-uuid")
-inkbox.tunnels.update(                      # description + metadata only
+inkbox.tunnels.update(                      # metadata-only
     "tunnel-uuid",
-    description="Sales-outreach agent",
     metadata={"team": "gtm"},
 )
 # Passthrough only:

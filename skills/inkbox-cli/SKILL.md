@@ -106,7 +106,6 @@ inkbox identity create <handle> [--display-name <name>] [--description <text>]
                                  [--email-local-part <part>]
                                  [--sending-domain <name> | --platform-domain]
                                  [--tls-mode edge|passthrough]
-                                 [--tunnel-description <text>]
 inkbox identity delete <handle>
 inkbox identity update <handle> [--new-handle <handle>] [--display-name <name>]
                                  [--description <text> | --clear-description]
@@ -268,11 +267,11 @@ Tunnels are provisioned atomically by `inkbox identity create` and removed by `i
 ```bash
 inkbox tunnel list
 inkbox tunnel get <id-or-handle>
-inkbox tunnel update <id> [--description <text>] [--metadata <json>]
+inkbox tunnel update <id> [--metadata <json>]
 inkbox tunnel sign-csr <id> --csr <path-or-pem> [--out <path>]
 ```
 
-`tunnel get` accepts either a UUID or the owning identity's agent handle. `tunnel update --description ""` clears the description; `--metadata "{}"` clears metadata. `tunnel sign-csr` is passthrough-only and uses an elevated 180-second timeout (the server runs DNS validation + cert issuance synchronously).
+`tunnel get` accepts either a UUID or the owning identity's agent handle. `tunnel update` is metadata-only; pass `--metadata "{}"` to clear. `tunnel sign-csr` is passthrough-only and uses an elevated 180-second timeout (the server runs DNS validation + cert issuance synchronously).
 
 Data-plane auth uses the same API key the CLI was invoked with — admin-scoped or identity-scoped (matching the tunnel's identity). There is no per-tunnel connect secret; mint an identity-scoped key via `inkbox api-keys create --identity-id <uuid>` for an agent.
 

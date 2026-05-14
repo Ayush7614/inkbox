@@ -139,7 +139,7 @@ describe("Inkbox.createIdentity", () => {
       displayName: "Sales Team",
       description: "Sales-outreach agent",
       emailLocalPart: "sales.team",
-      tunnel: { tlsMode: "passthrough", description: "passthrough tunnel" },
+      tunnel: { tlsMode: "passthrough" },
       phoneNumber: {
         incomingCallAction: "webhook",
         incomingCallWebhookUrl: "https://example.com/calls",
@@ -152,7 +152,7 @@ describe("Inkbox.createIdentity", () => {
     expect(call.displayName).toBe("Sales Team");
     expect(call.description).toBe("Sales-outreach agent");
     expect(call.mailbox).toEqual({ emailLocalPart: "sales.team" });
-    expect(call.tunnel).toEqual({ tlsMode: "passthrough", description: "passthrough tunnel" });
+    expect(call.tunnel).toEqual({ tlsMode: "passthrough" });
     expect(call.phoneNumber).toEqual({
       incomingCallAction: "webhook",
       incomingCallWebhookUrl: "https://example.com/calls",

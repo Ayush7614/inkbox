@@ -654,8 +654,7 @@ there is no standalone `create` / `delete` / `restore` /
 ```python
 inkbox.tunnels.list()
 inkbox.tunnels.get("tunnel-uuid")
-inkbox.tunnels.update("tunnel-uuid", description="Sales-outreach agent",
-                      metadata={"team": "gtm"})
+inkbox.tunnels.update("tunnel-uuid", metadata={"team": "gtm"})
 # Passthrough only:
 inkbox.tunnels.sign_csr("tunnel-uuid", csr_pem=csr_bytes)
 ```

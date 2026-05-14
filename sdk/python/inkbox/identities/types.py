@@ -61,12 +61,9 @@ class IdentityTunnelCreateOptions:
 
     Attributes:
         tls_mode: ``"edge"`` (default) or ``"passthrough"``.
-        description: Optional free-form tunnel description. Distinct from
-            the identity-level ``description`` field.
     """
 
     tls_mode: TLSMode | str | None = None
-    description: str | None = _UNSET  # type: ignore[assignment]
 
     def to_wire(self) -> dict[str, Any]:
         body: dict[str, Any] = {}
@@ -74,8 +71,6 @@ class IdentityTunnelCreateOptions:
             body["tls_mode"] = (
                 self.tls_mode.value if isinstance(self.tls_mode, TLSMode) else self.tls_mode
             )
-        if self.description is not _UNSET:
-            body["description"] = self.description
         return body
 
 

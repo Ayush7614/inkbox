@@ -38,6 +38,13 @@ namespace with `tunnel_name`.
   drops the underlying `delete_pending` value from the server enum.
 - `Tunnel.restoreDeadlineAt` / `restore_deadline_at` field — gone from
   the server's `TunnelResponse`.
+- `Tunnel.description` / `description` field, the `description` kwarg
+  on `tunnels.update()`, the nested `tunnel.description` /
+  `tunnel.description` field on `createIdentity()` /
+  `create_identity()`, and the `--tunnel-description` flag on
+  `inkbox identity create` and `inkbox tunnel update --description`.
+  The column was dropped server-side; use the identity-level
+  `description` field instead under the 1:1:1 invariant.
 - `CreatedTunnel`, `RotatedSecret`, and their raw / parsed forms.
 - `TunnelNameUnavailable` exception — replaced by the unified
   `HandleUnavailableError` (see Added).
@@ -65,9 +72,9 @@ namespace with `tunnel_name`.
   set/replace.
 - `IdentitiesResource.update()` / `identity.update()` grow to
   `{ newHandle?, displayName?, description?, status? }`.
-- Nested `tunnel: { tlsMode?, description? }` on
-  `CreateIdentityOptions`. TLS mode is fixed at create time —
-  switching requires `identity.delete()` + recreating.
+- Nested `tunnel: { tlsMode? }` on `CreateIdentityOptions`. TLS mode is
+  fixed at create time — switching requires `identity.delete()` +
+  recreating.
 - `AgentIdentity.tunnel` / `identity.tunnel` getter, parallel to
   `mailbox` and `phoneNumber`.
 - `validateAgentHandle` / `validate_agent_handle` (alias of the
@@ -80,11 +87,10 @@ namespace with `tunnel_name`.
   `{"identities", "tunnels", "mail"}` reports which side of the
   unified namespace rejected.
 - New `inkbox tunnel` CLI subcommand: `list`, `get <id-or-handle>`,
-  `update <id> [--description …] [--metadata …]`, `sign-csr <id>
-  --csr <path-or-pem> [--out <path>]`.
+  `update <id> [--metadata …]`, `sign-csr <id> --csr <path-or-pem>
+  [--out <path>]`.
 - New `inkbox identity create` flags: `--display-name`,
-  `--description`, `--email-local-part`, `--tls-mode edge|passthrough`,
-  `--tunnel-description`.
+  `--description`, `--email-local-part`, `--tls-mode edge|passthrough`.
 - New `inkbox identity update` flags: `--display-name`,
   `--description`, `--clear-description`, `--status active|paused`.
 - `examples/use-inkbox-cli/05-tunnel-edge.sh` and
@@ -99,10 +105,12 @@ namespace with `tunnel_name`.
   To rotate access, rotate the API key
   (`inkbox.apiKeys.create(...)` + revoke old).
 - `tunnels.connect()` / `inkbox.tunnels.connect(...)` no longer
-  accepts `tls_mode`, `description`, `secret`, or
-  `on_pending_removal` kwargs — tunnels must already exist (provisioned
-  via `createIdentity`), and TLS mode / description are set at create
-  time.
+  accepts `tls_mode`, `secret`, or `on_pending_removal` kwargs —
+  tunnels must already exist (provisioned via `createIdentity`), and
+  TLS mode is set at create time.
+- `tunnels.update()` is now metadata-only. The `description` column
+  was dropped from `tunnels` (subsumed by the identity-level
+  `description` field under the 1:1:1 invariant).
 - `Tunnel.publicHost` / `public_host` and `Tunnel.zone` / `zone` are
   non-nullable (the parser throws if missing).
 - `TunnelStatus` is now exactly `awaiting_cert` / `active` / `deleted`.

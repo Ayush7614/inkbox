@@ -23,7 +23,6 @@ IDENTITY_TUNNEL_DICT = {
     "id": "ffff6666-0000-0000-0000-000000000001",
     "organization_id": "org-abc123",
     "tunnel_name": "sales-agent",
-    "description": None,
     "tls_mode": "edge",
     "cert_pem": None,
     "cert_fingerprint_sha256": None,

@@ -27,7 +27,6 @@ def _server_tunnel(**overrides):
         "id": str(uuid4()),
         "organization_id": "org_test",
         "tunnel_name": "my-agent",
-        "description": None,
         "tls_mode": "edge",
         "cert_pem": None,
         "cert_fingerprint_sha256": None,
@@ -151,13 +150,6 @@ def test_update_omitted_skips_field(tunnels, http):
     tunnels.update("abc")
     body = http.patch.call_args.kwargs["json"]
     assert body == {}
-
-
-def test_update_explicit_none_clears_description(tunnels, http):
-    http.patch.return_value = _server_tunnel()
-    tunnels.update("abc", description=None)
-    body = http.patch.call_args.kwargs["json"]
-    assert body == {"description": None}
 
 
 def test_update_metadata_set(tunnels, http):

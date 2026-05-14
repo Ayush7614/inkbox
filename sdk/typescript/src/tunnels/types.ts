@@ -29,7 +29,6 @@ export interface Tunnel {
   id: string;
   organizationId: string;
   tunnelName: string;
-  description: string | null;
   tlsMode: TLSMode;
   certPem: string | null;
   certFingerprintSha256: string | null;
@@ -58,7 +57,6 @@ export interface RawTunnel {
   id: string;
   organization_id: string;
   tunnel_name: string;
-  description: string | null;
   tls_mode: string;
   cert_pem: string | null;
   cert_fingerprint_sha256: string | null;
@@ -97,7 +95,6 @@ export function parseTunnel(raw: RawTunnel): Tunnel {
     id: String(raw.id),
     organizationId: String(raw.organization_id),
     tunnelName: String(raw.tunnel_name),
-    description: raw.description ?? null,
     tlsMode: raw.tls_mode as TLSMode,
     certPem: raw.cert_pem ?? null,
     certFingerprintSha256: raw.cert_fingerprint_sha256 ?? null,

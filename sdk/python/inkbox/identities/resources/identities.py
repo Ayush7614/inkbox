@@ -55,7 +55,7 @@ class IdentitiesResource:
                 ``None`` to leave the column null; omit entirely to defer
                 to the server default.
             mailbox: Optional nested mailbox spec.
-            tunnel: Optional nested tunnel spec (tls_mode + description).
+            tunnel: Optional nested tunnel spec (tls_mode only).
             phone_number: Optional phone-number provisioning payload.
             vault_secret_ids: Optional vault secret selection to attach.
 

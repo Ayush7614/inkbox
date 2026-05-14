@@ -41,8 +41,8 @@ export class IdentitiesResource {
    *   `null` leaves the column null; omit to defer to server default.
    * @param options.mailbox - Optional nested mailbox spec. Mailbox is
    *   always provisioned; this just lets the caller customize.
-   * @param options.tunnel - Optional nested tunnel spec (tls_mode +
-   *   description). Tunnel is always provisioned; defaults to edge TLS.
+   * @param options.tunnel - Optional nested tunnel spec (tlsMode only).
+   *   Tunnel is always provisioned; defaults to edge TLS.
    * @param options.phoneNumber - Optional phone-number provisioning payload.
    * @param options.vaultSecretIds - Optional vault secret selection to attach to the identity.
    */

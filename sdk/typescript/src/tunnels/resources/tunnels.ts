@@ -47,8 +47,6 @@ function mapSignCsrError(err: InkboxAPIError): Error {
 }
 
 export interface UpdateTunnelOptions {
-  /** Pass `null` to clear; omit to leave unchanged. */
-  description?: string | null;
   /**
    * Pass `{}` or `null` to clear (the server's column is non-nullable
    * and collapses both forms to `{}`); omit to leave unchanged.
@@ -77,17 +75,14 @@ export class TunnelsResource {
   // --- Writes ----------------------------------------------------------
 
   /**
-   * Update a tunnel. Pass only the fields you want to change.
+   * Update a tunnel's metadata. `metadata` is the only mutable field;
+   * other tunnel attributes are derived from the owning identity.
    *
-   * - `description: null` clears the description.
-   * - `metadata: {}` clears metadata. `metadata` cannot be `null`
-   *   (rejected client-side); pass `{}` to clear.
+   * - `metadata: {}` (or `null`) clears the metadata bag. The server
+   *   column is non-nullable and collapses both forms to `{}`.
    */
   async update(tunnelId: string, options: UpdateTunnelOptions): Promise<Tunnel> {
     const body: Record<string, unknown> = {};
-    if ("description" in options) {
-      body.description = options.description;
-    }
     if ("metadata" in options) {
       const m = options.metadata;
       if (m !== null && m !== undefined) {

@@ -129,9 +129,8 @@ asyncio.run(main())
 ```python
 inkbox.tunnels.list()                  # list[Tunnel]
 inkbox.tunnels.get("tunnel-uuid")
-inkbox.tunnels.update(                 # description + metadata only
+inkbox.tunnels.update(                 # metadata-only
     "tunnel-uuid",
-    description="Sales-outreach agent",
     metadata={"team": "gtm"},
 )
 # Passthrough only: sign a CSR
@@ -243,7 +242,6 @@ const listener = await connect(inkbox, {
 await inkbox.tunnels.list();
 await inkbox.tunnels.get("tunnel-uuid");
 await inkbox.tunnels.update("tunnel-uuid", {
-  description: "Sales-outreach agent",
   metadata: { team: "gtm" },
 });
 // Passthrough only:

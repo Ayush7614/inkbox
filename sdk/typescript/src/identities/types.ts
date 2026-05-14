@@ -37,7 +37,6 @@ export interface IdentityPhoneNumberCreateOptions {
 
 export interface IdentityTunnelCreateOptions {
   tlsMode?: TLSMode | "edge" | "passthrough";
-  description?: string | null;
 }
 
 export interface CreateIdentityOptions {
@@ -56,7 +55,7 @@ export interface CreateIdentityOptions {
    * or a verified domain name to bind to that domain.
    */
   sendingDomain?: string | null;
-  /** Optional nested tunnel spec. Server picks edge / no-description defaults if omitted. */
+  /** Optional nested tunnel spec. Server defaults to edge TLS if omitted. */
   tunnel?: IdentityTunnelCreateOptions;
   phoneNumber?: IdentityPhoneNumberCreateOptions;
   vaultSecretIds?: string | string[] | "*" | "all";
