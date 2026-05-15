@@ -59,7 +59,7 @@ export class SmsOptInsResource {
    * Mark a recipient as opted in. Admin-only; requires the calling
    * org to be on its own actively-used 10DLC campaign (409
    * `customer_campaign_required` otherwise). Server records an
-   * audit event with `source=customer_api`.
+   * audit event with `source=api`.
    */
   async optIn(receiverNumber: string): Promise<SmsOptIn> {
     const data = await this.http.post<RawSmsOptIn>(

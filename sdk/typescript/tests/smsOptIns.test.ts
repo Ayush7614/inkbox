@@ -11,7 +11,7 @@ const OPT_IN_DICT = {
   organization_id: "org_test",
   receiver_number: "+15551234567",
   status: "opted_in",
-  source: "customer_api",
+  source: "api",
   opted_in_at: "2026-05-15T12:00:00Z",
   opted_out_at: null,
   created_at: "2026-05-15T12:00:00Z",
@@ -67,7 +67,7 @@ describe("SmsOptInsResource", () => {
     expect(url).toContain("offset=5");
     expect(rows).toHaveLength(2);
     expect(rows[0].status).toBe(SmsOptInStatus.OPTED_IN);
-    expect(rows[0].source).toBe(SmsOptInSource.CUSTOMER_API);
+    expect(rows[0].source).toBe(SmsOptInSource.API);
     expect(rows[0].optedOutAt).toBeNull();
     expect(rows[0].optedInAt).toBeInstanceOf(Date);
   });
@@ -110,7 +110,7 @@ describe("SmsOptInsResource", () => {
     expect(url).toContain("/sms-opt-ins/+15551234567/opt-in");
     expect(init.method).toBe("POST");
     expect(row.status).toBe(SmsOptInStatus.OPTED_IN);
-    expect(row.source).toBe(SmsOptInSource.CUSTOMER_API);
+    expect(row.source).toBe(SmsOptInSource.API);
   });
 
   it("optOut posts to /opt-out", async () => {

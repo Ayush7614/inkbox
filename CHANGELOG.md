@@ -14,7 +14,7 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
   `optOut()` write, but require the org to be on its own actively-
   used 10DLC campaign (server returns 409 `customer_campaign_required`
   for default-pool orgs). Writes record an audit event with
-  `source=customer_api`.
+  `source=api`.
 - New types: `SmsOptIn`, `SmsOptInStatus`, `SmsOptInSource`.
 
 ## 0.4.0

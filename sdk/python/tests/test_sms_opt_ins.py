@@ -18,7 +18,7 @@ OPT_IN_DICT = {
     "organization_id": "org_test",
     "receiver_number": "+15551234567",
     "status": "opted_in",
-    "source": "customer_api",
+    "source": "api",
     "opted_in_at": "2026-05-15T12:00:00Z",
     "opted_out_at": None,
     "created_at": "2026-05-15T12:00:00Z",
@@ -56,7 +56,7 @@ class TestSmsOptInsResource:
         )
         assert len(rows) == 2
         assert rows[0].status is SmsOptInStatus.OPTED_IN
-        assert rows[0].source is SmsOptInSource.CUSTOMER_API
+        assert rows[0].source is SmsOptInSource.API
         assert rows[0].opted_out_at is None
         assert rows[1].status is SmsOptInStatus.OPTED_OUT
 
@@ -98,7 +98,7 @@ class TestSmsOptInsResource:
 
         transport.post.assert_called_once_with("/sms-opt-ins/+15551234567/opt-in")
         assert row.status is SmsOptInStatus.OPTED_IN
-        assert row.source is SmsOptInSource.CUSTOMER_API
+        assert row.source is SmsOptInSource.API
         assert row.opted_in_at is not None
 
     def test_opt_out_hits_correct_endpoint(self, transport):

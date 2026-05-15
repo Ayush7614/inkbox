@@ -75,7 +75,7 @@ class SmsOptInsResource:
     def opt_in(self, receiver_number: str) -> SmsOptIn:
         """Mark a recipient as opted in (admin-only, customer-campaign orgs only).
 
-        Server records an audit event with ``source=customer_api``.
+        Server records an audit event with ``source=api``.
         Raises :class:`InkboxAPIError` with status 409 (error
         ``customer_campaign_required``) when the calling org is on
         the Inkbox-default pool rather than its own campaign.

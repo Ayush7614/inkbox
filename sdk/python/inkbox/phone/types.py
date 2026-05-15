@@ -367,15 +367,13 @@ class SmsOptInStatus(StrEnum):
 class SmsOptInSource(StrEnum):
     """Channel that recorded the consent transition.
 
-    ``customer_api`` rows came from an org with its own actively-used
-    10DLC campaign calling the opt-in / opt-out endpoints directly.
-    ``sms`` rows came from inbound STOP/START. ``web_form`` covers
-    signup / console consent capture.
+    ``api`` rows came from an org with its own actively-used 10DLC
+    campaign calling the opt-in / opt-out endpoints directly.
+    ``sms`` rows came from inbound STOP/START.
     """
 
-    WEB_FORM = "web_form"
     SMS = "sms"
-    CUSTOMER_API = "customer_api"
+    API = "api"
 
 
 @dataclass
