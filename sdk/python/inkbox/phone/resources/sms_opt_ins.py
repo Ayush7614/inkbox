@@ -5,10 +5,11 @@ SMS opt-in / opt-out registry (per-(org, receiver) consent state).
 
 Reads (``list``, ``get``) are available to any admin or JWT caller.
 Writes (``opt_in``, ``opt_out``) are gated server-side to orgs that
-run their own actively-used 10DLC campaign — orgs on the Inkbox-
-default pool share consent state and can't override it through this
-API. Calling ``opt_in`` / ``opt_out`` from a default-pool org will
-raise an :class:`InkboxAPIError` with a 409 status.
+run their own actively-used 10DLC campaign — orgs on the
+Inkbox-default campaign share consent state and can't override it
+through this API. Calling ``opt_in`` / ``opt_out`` from a
+default-campaign org will raise an :class:`InkboxAPIError` with a
+409 status.
 """
 
 from __future__ import annotations
@@ -48,7 +49,7 @@ class SmsOptInsResource:
 
         Args:
             status: Filter to ``opted_in`` or ``opted_out``. Omit for both.
-            limit: Max rows to return (server clamps to 200).
+            limit: Max rows to return (1-200; server rejects values above 200).
             offset: Number of rows to skip for pagination.
         """
         params: dict[str, Any] = {}
@@ -78,7 +79,7 @@ class SmsOptInsResource:
         Server records an audit event with ``source=api``.
         Raises :class:`InkboxAPIError` with status 409 (error
         ``customer_campaign_required``) when the calling org is on
-        the Inkbox-default pool rather than its own campaign.
+        the Inkbox-default campaign rather than its own.
         """
         data = self._http.post(_path(receiver_number, "opt-in"))
         return SmsOptIn._from_dict(data)
