@@ -13,7 +13,7 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
   calling org's rows; `opt_in()` / `optIn()` and `opt_out()` /
   `optOut()` write, but require the org to be on its own actively-
   used 10DLC campaign (server returns 409 `customer_campaign_required`
-  for default-pool orgs). Writes record an audit event with
+  for default-campaign orgs). Writes record an audit event with
   `source=api`.
 - New types: `SmsOptIn`, `SmsOptInStatus`, `SmsOptInSource`.
 - CLI: `inkbox sms-opt-in {list, get, opt-in, opt-out}` — same surface

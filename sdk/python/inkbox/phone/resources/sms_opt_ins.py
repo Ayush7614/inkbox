@@ -62,8 +62,7 @@ class SmsOptInsResource:
         if offset is not None:
             params["offset"] = offset
         data = self._http.get(_path(), params=params)
-        items = data["items"] if isinstance(data, dict) and "items" in data else data
-        return [SmsOptIn._from_dict(r) for r in items]
+        return [SmsOptIn._from_dict(r) for r in data]
 
     def get(self, receiver_number: str) -> SmsOptIn:
         """Get the opt-in row for one E.164 recipient.

@@ -72,17 +72,6 @@ describe("SmsOptInsResource", () => {
     expect(rows[0].optedInAt).toBeInstanceOf(Date);
   });
 
-  it("list handles the {items} wrapper", async () => {
-    vi.mocked(fetch).mockResolvedValue(ok({ items: [OPT_IN_DICT] }));
-    const http = new HttpTransport("k", BASE);
-    const resource = new SmsOptInsResource(http);
-
-    const rows = await resource.list();
-
-    expect(rows).toHaveLength(1);
-    expect(rows[0].receiverNumber).toBe("+15551234567");
-  });
-
   it("get hits /sms-opt-ins/{receiver}", async () => {
     vi.mocked(fetch).mockResolvedValue(ok(OPT_IN_DICT));
     const http = new HttpTransport("k", BASE);

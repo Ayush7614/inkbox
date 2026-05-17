@@ -71,15 +71,6 @@ class TestSmsOptInsResource:
             params={"status": "opted_in"},
         )
 
-    def test_list_handles_items_wrapper(self, transport):
-        transport.get.return_value = {"items": [OPT_IN_DICT]}
-        resource = SmsOptInsResource(transport)
-
-        rows = resource.list()
-
-        assert len(rows) == 1
-        assert rows[0].id == UUID(OPT_IN_DICT["id"])
-
     def test_get_by_receiver(self, transport):
         transport.get.return_value = OPT_IN_DICT
         resource = SmsOptInsResource(transport)

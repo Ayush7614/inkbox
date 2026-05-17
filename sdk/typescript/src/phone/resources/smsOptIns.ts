@@ -6,8 +6,8 @@
  * Reads (`list`, `get`) are available to any admin or JWT caller.
  * Writes (`optIn`, `optOut`) are gated server-side to orgs that run
  * their own actively-used 10DLC campaign — orgs on the Inkbox-default
- * pool share consent state and can't override it through this API.
- * Calling `optIn` / `optOut` from a default-pool org rejects with a
+ * campaign share consent state and can't override it through this API.
+ * Calling `optIn` / `optOut` from a default-campaign org rejects with a
  * 409 (`customer_campaign_required`).
  */
 
@@ -42,11 +42,8 @@ export class SmsOptInsResource {
     if (options.status !== undefined) params.status = options.status;
     if (options.limit !== undefined) params.limit = options.limit;
     if (options.offset !== undefined) params.offset = options.offset;
-    const data = await this.http.get<
-      { items: RawSmsOptIn[] } | RawSmsOptIn[]
-    >(path(), params);
-    const items = Array.isArray(data) ? data : data.items;
-    return items.map(parseSmsOptIn);
+    const data = await this.http.get<RawSmsOptIn[]>(path(), params);
+    return data.map(parseSmsOptIn);
   }
 
   /** Get the opt-in row for one E.164 recipient. 404 if no row exists. */
