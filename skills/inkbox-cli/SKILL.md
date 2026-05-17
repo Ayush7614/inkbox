@@ -176,7 +176,7 @@ Before sending, confirm recipients, subject, and body with the user.
 All phone commands are identity-scoped and require `-i <handle>`.
 
 ```bash
-inkbox phone call -i <handle> --to +15167251294 --ws-url wss://example.com/ws
+inkbox phone call -i <handle> --to +15551234567 --ws-url wss://example.com/ws
 inkbox phone calls -i <handle> --limit 10 --offset 0
 inkbox phone transcripts <call-id> -i <handle>
 inkbox phone search-transcripts -i <handle> -q "refund" --party remote
@@ -193,12 +193,12 @@ All text commands are identity-scoped and require `-i <handle>`.
 - Allowed only from **local** numbers, not toll-free.
 - **15 sends per phone number per rolling 24h.**
 - A freshly provisioned local number needs **~10-15 min** for 10DLC carrier propagation. Inspect with `inkbox number get <id>`; sending is gated until `smsStatus` reads `ready` (otherwise `409 sender_sms_pending`).
-- Recipient must have texted **`START`** to any number in the org. Unknown → `403 recipient_not_opted_in`. `STOP` → `403 recipient_opted_out`.
+- Recipient must have texted **`START`** to any number in the org. Unknown → `403 recipient_not_opted_in`. `STOP` → `403 recipient_opted_out`. Inspect / override consent state via `inkbox sms-opt-in` (see below).
 
 **Coming soon:** toll-free SMS sending, customer-managed 10DLC brands/campaigns (drastically higher per-number limits).
 
 ```bash
-inkbox text send -i <handle> --to +15167251294 --text "Hello from Inkbox"
+inkbox text send -i <handle> --to +15551234567 --text "Hello from Inkbox"
 inkbox text list -i <handle> --limit 20
 inkbox text get <text-id> -i <handle>
 inkbox text conversations -i <handle> --limit 20
@@ -206,6 +206,24 @@ inkbox text conversation <remote-number> -i <handle> --limit 50
 inkbox text search -i <handle> -q "invoice"
 inkbox text mark-read <text-id> -i <handle>
 inkbox text mark-conversation-read <remote-number> -i <handle>
+```
+
+## SMS Opt-Ins
+
+Per-recipient SMS consent state, keyed by `(your org, recipient number)`. The registry is updated automatically when recipients text `START` / `STOP` to any of your numbers (`source=sms`). Reads work for any admin caller; writes require your org to be on its own active, customer-managed 10DLC campaign — default-campaign orgs share consent state and get `409 customer_campaign_required` on writes (audit event recorded with `source=api`).
+
+```bash
+# List your org's consent rows, newest-updated first
+inkbox sms-opt-in list
+inkbox sms-opt-in list --status opted_out --limit 100
+inkbox --json sms-opt-in list
+
+# Look up one recipient — 404 if no row exists
+inkbox sms-opt-in get +15551234567
+
+# Programmatic writes (customer-managed 10DLC campaign only)
+inkbox sms-opt-in opt-in  +15551234567
+inkbox sms-opt-in opt-out +15551234567
 ```
 
 ## Vault

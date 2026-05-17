@@ -37,6 +37,7 @@ Inkbox (admin-only client)
 ├── .texts                    → TextsResource
 ├── .mail_contact_rules       → MailContactRulesResource
 ├── .phone_contact_rules      → PhoneContactRulesResource
+├── .sms_opt_ins              → SmsOptInsResource
 ├── .contacts                 → ContactsResource  (.access, .vcards)
 ├── .notes                    → NotesResource     (.access)
 ├── .vault                    → VaultResource
@@ -157,7 +158,7 @@ Low-level folder listing / per-thread updates (`list(folder=…)`, `list_folders
 ```python
 # Place outbound call — stream audio via WebSocket
 call = identity.place_call(
-    to_number="+15167251294",
+    to_number="+15551234567",
     client_websocket_url="wss://your-agent.example.com/ws",
 )
 print(call.status)
@@ -180,7 +181,7 @@ for t in identity.list_transcripts(calls[0].id):
 - Allowed only from **local** numbers, not toll-free.
 - **15 outbound sends per phone number per rolling 24h.**
 - New local numbers need **~10-15 min** for 10DLC carrier propagation. `identity.phone_number.sms_status` is `SmsStatus.PENDING` until ready; sends in this window return `409 sender_sms_pending`.
-- Recipient must have texted **`START`** to any number in the org. Unknown → `403 recipient_not_opted_in`. `STOP` → `403 recipient_opted_out`.
+- Recipient must have texted **`START`** to any number in the org. Unknown → `403 recipient_not_opted_in`. `STOP` → `403 recipient_opted_out`. Inspect / override consent state via `inkbox.sms_opt_ins` (see below).
 
 **Coming soon:** toll-free SMS sending, customer-managed 10DLC brands/campaigns (drastically higher per-number limits).
 
@@ -188,7 +189,7 @@ for t in identity.list_transcripts(calls[0].id):
 # Send an SMS from this identity's phone number.
 # Returns a queued TextMessage; final delivery state arrives via the
 # incoming_text_webhook_url configured on the sender.
-sent = identity.send_text(to="+15167251294", text="Hello from Inkbox")
+sent = identity.send_text(to="+15551234567", text="Hello from Inkbox")
 print(sent.id, sent.delivery_status)   # SmsDeliveryStatus.QUEUED
 
 # List text messages (offset pagination)
@@ -212,18 +213,38 @@ for c in convos:
     print(c.remote_phone_number, c.latest_text, c.unread_count, c.total_count)
 
 # Get messages in a specific conversation
-msgs = identity.get_text_conversation("+15167251294", limit=50)
+msgs = identity.get_text_conversation("+15551234567", limit=50)
 
 # Mark a text as read (identity convenience method)
 identity.mark_text_read("text-uuid")
 
 # Mark all messages in a conversation as read
-result = identity.mark_text_conversation_read("+15167251294")
+result = identity.mark_text_conversation_read("+15551234567")
 print(result["updated_count"])
 
 # Admin-only: search, update, delete
 results = inkbox.texts.search(phone.id, q="invoice", limit=20)
 inkbox.texts.update(phone.id, "text-uuid", status="deleted")
+```
+
+## SMS Opt-Ins
+
+Per-recipient SMS consent state, keyed by `(your org, recipient number)`. The registry is updated automatically when recipients text `START` / `STOP` to any of your numbers (`source="sms"`). Reads are admin-only; writes are admin-only **and** require your org to be on its own active, customer-managed 10DLC campaign (Inkbox-default-campaign orgs share consent state and get `409 customer_campaign_required` on writes — `source="api"` writes record an audit event).
+
+```python
+from inkbox import SmsOptInStatus
+
+# List your org's consent rows, newest-updated first (server caps limit at 200)
+rows = inkbox.sms_opt_ins.list(limit=50)
+opted_out = inkbox.sms_opt_ins.list(status=SmsOptInStatus.OPTED_OUT)
+
+# Look up one recipient — 404 → InkboxAPIError if no row exists
+row = inkbox.sms_opt_ins.get("+15551234567")
+print(row.status, row.source, row.opted_in_at, row.opted_out_at)
+
+# Programmatic writes (customer-managed 10DLC campaign only)
+inkbox.sms_opt_ins.opt_in("+15551234567")
+inkbox.sms_opt_ins.opt_out("+15551234567")
 ```
 
 ## Vault

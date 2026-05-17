@@ -4,6 +4,24 @@ All notable changes to the Inkbox SDK, CLI, and skills live here.
 Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 (Python), and `@inkbox/cli`.
 
+## 0.4.1
+
+### Added
+
+- `inkbox.sms_opt_ins` / `inkbox.smsOptIns` — SMS opt-in / opt-out
+  registry (per-(org, receiver) consent). `list()` / `get()` read the
+  calling org's rows; `opt_in()` / `optIn()` and `opt_out()` /
+  `optOut()` write, but require the org to be on its own actively-
+  used 10DLC campaign (server returns 409 `customer_campaign_required`
+  for default-campaign orgs). Writes record an audit event with
+  `source=api`.
+- New types: `SmsOptIn`, `SmsOptInStatus`, `SmsOptInSource`.
+- CLI: `inkbox sms-opt-in {list, get, opt-in, opt-out}` — same surface
+  as the SDKs, with `--status` / `--limit` / `--offset` filters on
+  list and `--json` on every command. `--base-url` now also reads
+  `INKBOX_BASE_URL` so the CLI can target dev/beta without threading
+  the flag.
+
 ## 0.4.0
 
 Breaking-changes release. The repo is still sub-1.0 so the version is

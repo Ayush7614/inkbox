@@ -238,7 +238,7 @@ for (const m of thread.messages) {
 ```ts
 // Place an outbound call — stream audio over WebSocket
 const call = await identity.placeCall({
-  toNumber: "+15167251294",
+  toNumber: "+15551234567",
   clientWebsocketUrl: "wss://your-agent.example.com/ws",
 });
 console.log(call.status, call.rateLimit.callsRemaining);
@@ -288,7 +288,7 @@ Send and receive SMS/MMS through the identity's assigned phone number.
 - Outbound SMS is currently allowed only from **local** numbers, not toll-free.
 - Each sender phone number is rate-limited to **15 outbound texts per rolling 24-hour window**.
 - A new local number takes **~10-15 minutes** for the 10DLC campaign to propagate at the carrier — `phoneNumber.smsStatus` reads `"pending"` until then, and sends will return `409 sender_sms_pending`.
-- The recipient must have texted **`START`** to any number within your organization to opt in. Unknown recipients will fail with `403 recipient_not_opted_in`; recipients who later send `STOP` flip to `403 recipient_opted_out`.
+- The recipient must have texted **`START`** to any number within your organization to opt in. Unknown recipients will fail with `403 recipient_not_opted_in`; recipients who later send `STOP` flip to `403 recipient_opted_out`. You can inspect consent state directly via `inkbox.smsOptIns` — see [SMS Opt-Ins](#sms-opt-ins).
 
 **Coming soon:**
 
@@ -299,7 +299,7 @@ Send and receive SMS/MMS through the identity's assigned phone number.
 // Send an SMS. Returns a queued TextMessage; final delivery state arrives
 // via the incomingTextWebhookUrl configured on the sender.
 const sent = await identity.sendText({
-  to: "+15167251294",
+  to: "+15551234567",
   text: "Hello from Inkbox",
 });
 console.log(sent.id, sent.deliveryStatus);   // "queued"
@@ -329,15 +329,50 @@ for (const c of convos) {
 }
 
 // Get messages in a specific conversation
-const msgs = await identity.getTextConversation("+15167251294", { limit: 50 });
+const msgs = await identity.getTextConversation("+15551234567", { limit: 50 });
 
 // Mark as read
 await identity.markTextRead("text-uuid");
-await identity.markTextConversationRead("+15167251294");
+await identity.markTextConversationRead("+15551234567");
 
 // Org-level: search and delete
 const results = await inkbox.texts.search(phone.id, { q: "invoice", limit: 20 });
 await inkbox.texts.update(phone.id, "text-uuid", { status: "deleted" });
+```
+
+---
+
+## SMS Opt-Ins
+
+Per-recipient SMS consent state, keyed by `(your org, recipient number)`. The
+registry is updated automatically when recipients text `START` / `STOP` to any
+of your numbers (`source: "sms"`).
+
+**Reads** — open to admin API keys and Clerk JWT.
+
+```ts
+import { SmsOptInStatus } from "@inkbox/sdk";
+
+// List the org's consent rows (newest-updated first; server caps limit at 200)
+const rows = await inkbox.smsOptIns.list({ limit: 50 });
+const optedOut = await inkbox.smsOptIns.list({ status: SmsOptInStatus.OPTED_OUT });
+
+// Look up one recipient — 404 → InkboxAPIError if no row exists
+const row = await inkbox.smsOptIns.get("+15551234567");
+console.log(row.status, row.source, row.optedInAt, row.optedOutAt);
+```
+
+**Writes** — admin-only, and only if your org runs its own active, customer-managed 10DLC
+campaign. Orgs on the Inkbox-default campaign share consent state and get a
+`409 customer_campaign_required` on write attempts. Writes record an audit
+event with `source: "api"`.
+
+```ts
+// Record consent captured outside of STOP/START (signup form, paper waiver, etc.)
+await inkbox.smsOptIns.optIn("+15551234567");
+
+// Honor an opt-out collected outside of inbound STOP
+await inkbox.smsOptIns.optOut("+15551234567");
 ```
 
 ---
@@ -547,7 +582,7 @@ const call = await inkbox.calls.get("phone-number-uuid", "call-uuid");
 // Place an outbound call
 const placed = await inkbox.calls.place({
   fromNumber: "phone-number-uuid",
-  toNumber: "+15167251294",
+  toNumber: "+15551234567",
   clientWebsocketUrl: "wss://example.com/ws",
 });
 

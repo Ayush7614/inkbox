@@ -357,6 +357,59 @@ class PhoneTranscript:
         )
 
 
+class SmsOptInStatus(StrEnum):
+    """Consent state of a receiver number for the calling org."""
+
+    OPTED_IN = "opted_in"
+    OPTED_OUT = "opted_out"
+
+
+class SmsOptInSource(StrEnum):
+    """Channel that recorded the consent transition.
+
+    ``api`` rows came from an org with its own active, customer-managed 10DLC
+    campaign calling the opt-in / opt-out endpoints directly.
+    ``sms`` rows came from inbound STOP/START.
+    """
+
+    SMS = "sms"
+    API = "api"
+
+
+@dataclass
+class SmsOptIn:
+    """A per-(org, receiver) SMS consent row.
+
+    ``receiver_number`` is E.164 (``+15551234567``). Only one of
+    ``opted_in_at`` / ``opted_out_at`` is populated at a time — the
+    one matching the current ``status``.
+    """
+
+    id: UUID
+    organization_id: str
+    receiver_number: str
+    status: SmsOptInStatus
+    source: SmsOptInSource
+    opted_in_at: datetime | None
+    opted_out_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    @classmethod
+    def _from_dict(cls, d: dict[str, Any]) -> SmsOptIn:
+        return cls(
+            id=UUID(d["id"]),
+            organization_id=d["organization_id"],
+            receiver_number=d["receiver_number"],
+            status=SmsOptInStatus(d["status"]),
+            source=SmsOptInSource(d["source"]),
+            opted_in_at=_dt(d.get("opted_in_at")),
+            opted_out_at=_dt(d.get("opted_out_at")),
+            created_at=datetime.fromisoformat(d["created_at"]),
+            updated_at=datetime.fromisoformat(d["updated_at"]),
+        )
+
+
 @dataclass
 class PhoneContactRule:
     """An inbound/outbound allow/block rule scoped to a phone number."""

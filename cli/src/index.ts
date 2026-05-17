@@ -7,6 +7,7 @@ import { registerIdentityCommands } from "./commands/identity.js";
 import { registerEmailCommands } from "./commands/email.js";
 import { registerPhoneCommands } from "./commands/phone.js";
 import { registerTextCommands } from "./commands/text.js";
+import { registerSmsOptInCommands } from "./commands/sms-opt-in.js";
 import { registerVaultCommands } from "./commands/vault.js";
 import { registerMailboxCommands } from "./commands/mailbox.js";
 import { registerTunnelCommands } from "./commands/tunnel.js";
@@ -24,7 +25,7 @@ const program = new Command()
   .version("0.1.0")
   .option("--api-key <key>", "Inkbox API key (or set INKBOX_API_KEY)")
   .option("--vault-key <key>", "Vault key for decrypt operations (or set INKBOX_VAULT_KEY)")
-  .option("--base-url <url>", "Override API base URL")
+  .option("--base-url <url>", "Override API base URL (or set INKBOX_BASE_URL)")
   .option("--json", "Output as JSON", false);
 
 registerWhoamiCommand(program);
@@ -33,6 +34,7 @@ registerIdentityCommands(program);
 registerEmailCommands(program);
 registerPhoneCommands(program);
 registerTextCommands(program);
+registerSmsOptInCommands(program);
 registerVaultCommands(program);
 registerMailboxCommands(program);
 registerTunnelCommands(program);
