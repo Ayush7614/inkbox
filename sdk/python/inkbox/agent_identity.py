@@ -559,9 +559,12 @@ class AgentIdentity:
             text: Message body (1-1600 chars).
 
         Returns:
-            The queued ``TextMessage``. Delivery confirmation is delivered
-            via the ``incoming_text_webhook_url`` on the sender, not the
-            return value.
+            The queued ``TextMessage``. The full outbound lifecycle
+            (``text.sent`` -> ``text.delivered`` / ``text.delivery_failed``
+            / ``text.delivery_unconfirmed``) arrives via the
+            ``incoming_text_webhook_url`` on the sender, not the return
+            value. See ``TextWebhookEventType`` and ``TextWebhookPayload``
+            for the typed receiver-side shapes.
 
         Raises:
             InkboxError: when this identity has no phone number.

@@ -4,6 +4,45 @@ All notable changes to the Inkbox SDK, CLI, and skills live here.
 Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 (Python), and `@inkbox/cli`.
 
+## 0.4.2
+
+### Added
+
+- Typed receiver-side webhook payload models: `WebhookContact`,
+  `MailWebhookPayload`, `TextWebhookPayload`, and
+  `PhoneIncomingCallWebhookPayload`, plus their event-type string
+  unions and the supporting string-literal wire enums (`MessageStatus`,
+  `MessageDirectionWire`, `TextDirectionWire`, `TextTypeWire`,
+  `SmsDeliveryStatusWire`, `TextMessageOriginWire`, `CallStatusWire`,
+  `HangupReasonWire`, `CallDirectionWire`) and snake_case nested wire
+  shapes (`RawTextMediaItem`, `RawRateLimitInfo` on the TS side;
+  `TextMediaItemWire`, `RateLimitInfoWire` on the Python side). Lets
+  app code parse and narrow webhook bodies without hand-rolling
+  shapes.
+- New outbound-text webhook events on a phone number's
+  `incoming_text_webhook_url`: `text.sent` (carrier accepted),
+  `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`.
+  Wrapped in the standard `{event_type, timestamp, data}` envelope
+  alongside the existing `text.received`. Dispatch is fire-and-forget.
+  `data.text_message` carries the full outbound lifecycle metadata
+  (`delivery_status`, `error_code`, `error_detail`, `sent_at`,
+  `delivered_at`, `failed_at`).
+- All outbound webhook payloads now carry a `contact` field — an
+  optional `{ id, name }` address-book match for the remote party,
+  scoped to the receiving channel's `identity_id` via the
+  `contact_access` model (wildcard sentinel or explicit grant; oldest
+  match by `created_at` wins). `data.contact` on mail and text,
+  top-level `contact` on the inbound call payload.
+
+### Changed
+
+- README + skill docs (TS, Python, openclaw, CLI) updated with the
+  new event taxonomy and contact-resolution semantics.
+- TS `texts.send()` / `agentIdentity.sendText()` and Python
+  `texts.send()` / `agent_identity.send_text()` docstrings now
+  enumerate the four outbound text lifecycle events and reference
+  `TextWebhookEventType` / `TextWebhookPayload`.
+
 ## 0.4.1
 
 ### Added

@@ -20,9 +20,13 @@ export class TextsResource {
   /**
    * Send an outbound SMS from a phone number.
    *
-   * The returned message is in `queued` state — final delivery
-   * (`delivered`, `delivery_failed`, `delivery_unconfirmed`) arrives via
-   * the `incomingTextWebhookUrl` configured on the sender.
+   * The returned message is in `queued` state. The full outbound
+   * lifecycle (`text.sent` → `text.delivered` / `text.delivery_failed`
+   * / `text.delivery_unconfirmed`) arrives via the
+   * `incomingTextWebhookUrl` configured on the sender. The same URL
+   * also receives inbound `text.received` events; see
+   * `TextWebhookEventType` and `TextWebhookPayload` for the typed
+   * receiver-side shapes.
    *
    * @param phoneNumberId - UUID of the sending phone number.
    * @param options.to - E.164 destination number.

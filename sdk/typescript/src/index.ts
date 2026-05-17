@@ -32,6 +32,30 @@ export {
 } from "./whoami/types.js";
 export type { SigningKey } from "./signing_keys.js";
 export { verifyWebhook } from "./signing_keys.js";
+export type {
+  WebhookContact,
+  MailWebhookPayload,
+  MailWebhookEventType,
+  MailWebhookMessage,
+  MessageStatus,
+  MessageDirectionWire,
+  TextWebhookPayload,
+  TextWebhookEventType,
+  TextWebhookMessage,
+  TextDirectionWire,
+  TextTypeWire,
+  SmsDeliveryStatusWire,
+  TextMessageOriginWire,
+  PhoneIncomingCallWebhookPayload,
+  CallStatusWire,
+  HangupReasonWire,
+  CallDirectionWire,
+} from "./webhooks/types.js";
+// Snake_case wire shapes referenced by the webhook payload types above.
+// Re-exported from the root entry because package.json#exports only
+// publishes `"."` and `"./tunnels/connect"` — deep imports of
+// `phone/types.js` are not a valid public API.
+export type { RawRateLimitInfo, RawTextMediaItem } from "./phone/types.js";
 export {
   ContactRuleStatus,
   FilterMode,

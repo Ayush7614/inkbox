@@ -705,20 +705,36 @@ For full options, lifecycle notes, and TS examples, see `skills/inkbox-tunnels/S
 Webhooks are configured directly on the mailbox or phone number — no separate registration.
 
 ```python
-from inkbox import verify_webhook
+import json
+from typing import cast
+from inkbox import (
+    verify_webhook,
+    MailWebhookPayload, TextWebhookPayload, PhoneIncomingCallWebhookPayload,
+)
 
 # Rotate signing key (plaintext returned once — save it)
 key = inkbox.create_signing_key()
 
-# Verify an incoming webhook request
-is_valid = verify_webhook(
-    payload=raw_body,                                    # bytes
-    headers=request.headers,
-    secret="whsec_...",
-)
+# Verify, then parse + discriminate
+if not verify_webhook(payload=raw_body, headers=request.headers, secret="whsec_..."):
+    raise HTTPException(status_code=403)
+payload = cast(TextWebhookPayload, json.loads(raw_body))
+if payload["event_type"] == "text.delivery_failed":
+    msg = payload["data"]["text_message"]
+    logger.error("SMS failed: %s (%s)", msg["error_code"], msg["error_detail"])
 ```
 
 Algorithm: HMAC-SHA256 over `"{request_id}.{timestamp}.{body}"`.
+
+**Event taxonomy:**
+
+- **Mail** (envelope, fire-and-forget): `message.received`, `message.sent`, `message.forwarded`, `message.delivered`, `message.bounced`, `message.failed`. All six fire on a mailbox's `webhook_url`.
+- **Text** (envelope, fire-and-forget) — all five fire on a phone number's `incoming_text_webhook_url`: `text.received`, `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. The text-message body carries the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`).
+- **Inbound call** (flat, synchronous): `PhoneIncomingCallWebhookPayload` on a phone number's `incoming_call_webhook_url`. No `event_type`/`timestamp`/`data` envelope. The response (`action: "answer" | "reject" | "ignore"` + optional `client_websocket_url`) decides the call's fate.
+
+**`data["contact"]` (mail/text) and top-level `contact` (calls):** an optional `{"id", "name"}` address-book match for the remote party. Scoped to the receiving channel's identity through the server's `contact_access` model (org wildcard or explicit per-identity grant). Match key: inbound mail → `from_address`, outbound mail → `to_addresses[0]` (CC/BCC-only sends → `None`), text → `remote_phone_number`, inbound call → `remote_phone_number`. Oldest matching contact by `created_at` wins; treat `None` as "no visible contact," never as an error.
+
+Exported wire types: `MailWebhookPayload`, `TextWebhookPayload`, `PhoneIncomingCallWebhookPayload`, `WebhookContact`, plus event-type `Literal` unions (`MailWebhookEventType`, `TextWebhookEventType`) and wire enums (`MessageStatus`, `CallStatusWire`, `HangupReasonWire`, `SmsDeliveryStatusWire`, etc.). All fields are snake_case `TypedDict`s to match the raw JSON body.
 
 ## Error Handling
 

@@ -1,0 +1,22 @@
+{
+  "event_type": "message.failed",
+  "timestamp": "2026-04-10T18:18:11.942Z",
+  "data": {
+    "message": {
+      "id": "d490b2a7-2ac8-4c57-bbdd-438c844e11d7",
+      "mailbox_id": "73fdb447-4d3a-4a31-bf05-7373d6dfdf74",
+      "thread_id": "fef11c98-6f16-466b-b8d1-6019fc5b0183",
+      "message_id": "<abc123@example.com>",
+      "from_address": "support@inkboxmail.com",
+      "to_addresses": ["customer@example.com"],
+      "cc_addresses": null,
+      "subject": "Re: Question about pricing",
+      "snippet": "Absolutely. Here's the breakdown...",
+      "direction": "outbound",
+      "status": "failed",
+      "has_attachments": false,
+      "created_at": "2026-04-10T18:15:03.221Z"
+    },
+    "contact": null
+  }
+}

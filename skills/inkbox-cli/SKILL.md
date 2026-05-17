@@ -389,6 +389,21 @@ inkbox webhook verify --payload <payload> --secret <secret> -H "X-Header: value"
 
 Use `whoami --json` when you need the authenticated caller shape exactly.
 
+`inkbox webhook verify` is event-type-agnostic — it operates on raw bytes
+and only checks the `X-Inkbox-Signature` HMAC. The body can be any of:
+
+- **Mail** (envelope): `message.received`, `message.sent`,
+  `message.forwarded`, `message.delivered`, `message.bounced`,
+  `message.failed`.
+- **Text** (envelope): `text.received`, `text.sent`, `text.delivered`,
+  `text.delivery_failed`, `text.delivery_unconfirmed`.
+- **Inbound call** (flat, no envelope; response controls call routing).
+
+All payloads carry an optional `contact: { id, name } | null`
+address-book match for the remote party — `data.contact` on mail/text,
+top-level `contact` on the inbound call. For the typed receiver-side
+shapes, see the SDK skills (`inkbox-ts`, `inkbox-python`).
+
 ## Practical Guidance
 
 - Prefer the local repo command `npm --prefix cli run dev -- ...` when working in this codebase.

@@ -445,8 +445,12 @@ export class AgentIdentity {
   /**
    * Send an outbound SMS from this identity's phone number.
    *
-   * The returned message is in `queued` state. Final delivery state arrives
-   * via the `incomingTextWebhookUrl` configured on the sender.
+   * The returned message is in `queued` state. The full outbound
+   * lifecycle (`text.sent` → `text.delivered` / `text.delivery_failed`
+   * / `text.delivery_unconfirmed`) arrives via the
+   * `incomingTextWebhookUrl` configured on the sender. See
+   * `TextWebhookEventType` and `TextWebhookPayload` for the typed
+   * receiver-side shapes.
    *
    * @param options.to - E.164 destination number (e.g. `"+15551234567"`).
    * @param options.text - Message body (1-1600 chars).

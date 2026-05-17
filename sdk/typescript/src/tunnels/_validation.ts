@@ -1,15 +1,17 @@
 /**
  * inkbox-tunnels/_validation.ts
  *
- * Local handle / tunnel-name validation. Mirrors the server's canonical
- * validator (`~/servers/src/data_models/api_contracts/tunnel.py`).
- * Handle and tunnel-name share a single global namespace; the same
- * rules apply to both. `validateAgentHandle` is an alias for callers
- * who think of the value as a handle.
+ * Local handle / tunnel-name validation. Mirrors the syntactic rules
+ * in the server's canonical validator
+ * (`~/servers/src/data_models/api_contracts/tunnel.py`). Reserved-name
+ * collisions are NOT checked here — the server is authoritative and
+ * will return a 409 (`HandleUnavailableError`). Handle and tunnel-name
+ * share a single global namespace; the same rules apply to both.
+ * `validateAgentHandle` is an alias for callers who think of the value
+ * as a handle.
  */
 
 import { TunnelNameInvalid } from "./exceptions.js";
-import { isReservedName } from "./_reserved_names.js";
 
 const MIN_LENGTH = 3;
 const MAX_LENGTH = 63;
@@ -47,9 +49,6 @@ export function validateTunnelName(name: string): string {
         "hyphens, must start and end with a letter or number, and must " +
         "not contain consecutive hyphens",
     );
-  }
-  if (isReservedName(normalized)) {
-    throw new TunnelNameInvalid(`tunnel_name '${normalized}' is reserved`);
   }
   return normalized;
 }
