@@ -697,7 +697,7 @@ Webhooks are configured on the mailbox or phone number resource — no separate 
 
 ### Mailbox webhooks
 
-Set a URL on a mailbox to receive `message.received` and `message.sent` events.
+Set a URL on a mailbox to receive every mail event for that mailbox.
 
 ```ts
 // Set webhook
@@ -707,17 +707,85 @@ await inkbox.mailboxes.update("abc@inkboxmail.com", { webhookUrl: "https://examp
 await inkbox.mailboxes.update("abc@inkboxmail.com", { webhookUrl: null });
 ```
 
+The same URL receives all six mail event types:
+
+| `event_type` | When |
+|---|---|
+| `message.received` | A new inbound message was stored. |
+| `message.sent` | An outbound message was accepted for delivery. |
+| `message.forwarded` | A stored message was forwarded out. |
+| `message.delivered` | Downstream delivery succeeded. |
+| `message.bounced` | Downstream delivery bounced. |
+| `message.failed` | Delivery ultimately failed. |
+
+Every payload uses the standard `{event_type, timestamp, data}` envelope. `data.contacts` is a list of address-book matches (always present, possibly empty) — inbound events resolve the sender plus every CC, outbound events resolve every To + CC + BCC. Each entry is `{ bucket: "from" | "to" | "cc" | "bcc", address, id, name }`; receivers should pair to the source field by `(bucket, address)` since the same address may legally appear in multiple buckets on a single send. `data.message.bcc_addresses` is populated only on outbound events (the sending mailbox owner already knows the BCC list); inbound payloads carry `null` (BCC is not visible to recipients).
+
 ### Phone webhooks
 
-Set an incoming call webhook URL and action on a phone number.
+Phone numbers have two independent webhook URLs:
+
+- `incomingCallWebhookUrl` — receives the **flat, synchronous** inbound-call payload. Your response (`action: "answer" | "reject"` plus optional `clientWebsocketUrl`) decides what happens to the call. Non-200 responses, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
+- `incomingTextWebhookUrl` — receives **all five** text lifecycle events: `text.received` (inbound), and the four outbound transitions `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. Fire-and-forget.
 
 ```ts
 // Route incoming calls to a webhook
 await inkbox.phoneNumbers.update(number.id, {
   incomingCallAction: "webhook",
   incomingCallWebhookUrl: "https://example.com/calls",
+  incomingTextWebhookUrl: "https://example.com/texts",
 });
 ```
+
+The inbound-call payload is flat — no envelope — and carries a singular `contact: { id, name } | null` at the top level. Text payloads use the standard envelope with `data.contact` (singular) and `data.text_message`. Each phone/text event has exactly one remote party, so the contact shape stays singular there; only mail uses the per-bucket list. The text-message body includes the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`) so receivers can act on outbound failures without a follow-up API call.
+
+### Receiving webhooks (typed)
+
+The SDK exports wire-shape types for every payload. Pair `verifyWebhook` with `JSON.parse(body) as MailWebhookPayload | TextWebhookPayload | PhoneIncomingCallWebhookPayload` and discriminate on `event_type` (or, for inbound calls, on the absence of an envelope):
+
+```ts
+import {
+  MailWebhookPayload,
+  TextWebhookPayload,
+  PhoneIncomingCallWebhookPayload,
+  verifyWebhook,
+} from "@inkbox/sdk";
+
+app.post("/hooks/mail", express.raw({ type: "*/*" }), (req, res) => {
+  if (!verifyWebhook({ payload: req.body, headers: req.headers, secret: "whsec_..." })) {
+    return res.status(403).end();
+  }
+  const payload = JSON.parse(req.body.toString()) as MailWebhookPayload;
+  for (const match of payload.data.contacts) {
+    console.log(`${match.bucket} ${match.address} -> ${match.name} (${match.id})`);
+  }
+  res.status(204).end();
+});
+
+app.post("/hooks/text", express.raw({ type: "*/*" }), (req, res) => {
+  if (!verifyWebhook({ payload: req.body, headers: req.headers, secret: "whsec_..." })) {
+    return res.status(403).end();
+  }
+  const payload = JSON.parse(req.body.toString()) as TextWebhookPayload;
+  switch (payload.event_type) {
+    case "text.delivery_failed": {
+      const m = payload.data.text_message;
+      console.error(`SMS to ${m.remote_phone_number} failed`, m.error_code, m.error_detail);
+      break;
+    }
+    case "text.delivered":
+      // delivery_status, sent_at, delivered_at are all populated.
+      break;
+    case "text.received":
+      if (payload.data.contact) {
+        console.log("inbound from known contact", payload.data.contact.id);
+      }
+      break;
+  }
+  res.status(204).end();
+});
+```
+
+Wire shapes are intentionally **snake_case** (the raw JSON body, not the SDK's parsed camelCase types) so `JSON.parse(body) as MailWebhookPayload` round-trips without a transformer. Enum-valued fields like `direction`, `status`, and `delivery_status` are string-literal unions (e.g. `"inbound" | "outbound"`) rather than the SDK's TS `enum`s — `JSON.parse` produces bare strings, and literal unions narrow cleanly.
 
 ---
 

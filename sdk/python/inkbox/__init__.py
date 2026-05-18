@@ -163,6 +163,33 @@ from inkbox.identities.exceptions import (
 # Signing key + webhook verification
 from inkbox.signing_keys import SigningKey, verify_webhook
 
+# Receiver-side webhook payload types
+from inkbox.webhooks import (
+    CallDirectionWire,
+    CallStatusWire,
+    HangupReasonWire,
+    MailContactBucket,
+    MailWebhookData,
+    MailWebhookEventType,
+    MailWebhookMessage,
+    MailWebhookPayload,
+    MessageDirectionWire,
+    MessageStatus,
+    PhoneIncomingCallWebhookPayload,
+    RateLimitInfoWire,
+    SmsDeliveryStatusWire,
+    TextDirectionWire,
+    TextMediaItemWire,
+    TextMessageOriginWire,
+    TextTypeWire,
+    TextWebhookData,
+    TextWebhookEventType,
+    TextWebhookMessage,
+    TextWebhookPayload,
+    WebhookContact,
+    WebhookMailContact,
+)
+
 # API keys
 from inkbox.api_keys.types import ApiKey, ApiKeyStatus, CreatedApiKey
 
@@ -293,6 +320,30 @@ __all__ = [
     # Signing key + webhook verification
     "SigningKey",
     "verify_webhook",
+    # Receiver-side webhook payload types
+    "CallDirectionWire",
+    "CallStatusWire",
+    "HangupReasonWire",
+    "MailContactBucket",
+    "MailWebhookData",
+    "MailWebhookEventType",
+    "MailWebhookMessage",
+    "MailWebhookPayload",
+    "MessageDirectionWire",
+    "MessageStatus",
+    "PhoneIncomingCallWebhookPayload",
+    "RateLimitInfoWire",
+    "SmsDeliveryStatusWire",
+    "TextDirectionWire",
+    "TextMediaItemWire",
+    "TextMessageOriginWire",
+    "TextTypeWire",
+    "TextWebhookData",
+    "TextWebhookEventType",
+    "TextWebhookMessage",
+    "TextWebhookPayload",
+    "WebhookContact",
+    "WebhookMailContact",
     # API keys
     "ApiKey",
     "ApiKeyStatus",

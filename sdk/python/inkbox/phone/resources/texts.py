@@ -35,8 +35,13 @@ class TextsResource:
             text: Message body (1-1600 chars, non-whitespace required).
 
         Returns:
-            The queued ``TextMessage`` row. Final delivery state arrives via
-            the ``incoming_text_webhook_url`` configured on the sender.
+            The queued ``TextMessage`` row. The full outbound lifecycle
+            (``text.sent`` -> ``text.delivered`` / ``text.delivery_failed``
+            / ``text.delivery_unconfirmed``) arrives via the
+            ``incoming_text_webhook_url`` configured on the sender. The
+            same URL also receives inbound ``text.received`` events;
+            see ``TextWebhookEventType`` and ``TextWebhookPayload`` for
+            the typed receiver-side shapes.
 
         Raises:
             RecipientBlockedError: when the destination is blocked by an

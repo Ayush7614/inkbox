@@ -84,11 +84,6 @@ describe("TunnelsResource", () => {
     expect(() => validateTunnelName("my--agent")).toThrow(TunnelNameInvalid);
   });
 
-  it("rejects reserved names", () => {
-    expect(() => validateTunnelName("admin")).toThrow(TunnelNameInvalid);
-    expect(() => validateTunnelName("openai")).toThrow(TunnelNameInvalid);
-  });
-
   it("normalizes @prefix and uppercase", () => {
     expect(validateTunnelName("@MyAgent")).toBe("myagent");
   });

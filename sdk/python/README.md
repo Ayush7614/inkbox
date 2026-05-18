@@ -710,7 +710,7 @@ Webhooks are configured on the mailbox or phone number resource — no separate 
 
 ### Mailbox webhooks
 
-Set a URL on a mailbox to receive `message.received` and `message.sent` events.
+Set a URL on a mailbox to receive every mail event for that mailbox.
 
 ```python
 # Set webhook
@@ -720,9 +720,25 @@ inkbox.mailboxes.update("abc@inkboxmail.com", webhook_url="https://example.com/h
 inkbox.mailboxes.update("abc@inkboxmail.com", webhook_url=None)
 ```
 
+The same URL receives all six mail event types:
+
+| `event_type` | When |
+|---|---|
+| `message.received` | A new inbound message was stored. |
+| `message.sent` | An outbound message was accepted for delivery. |
+| `message.forwarded` | A stored message was forwarded out. |
+| `message.delivered` | Downstream delivery succeeded. |
+| `message.bounced` | Downstream delivery bounced. |
+| `message.failed` | Delivery ultimately failed. |
+
+Every payload uses the standard `{event_type, timestamp, data}` envelope. `data["contacts"]` is a list of address-book matches (always present, possibly empty) — inbound events resolve the sender plus every CC, outbound events resolve every To + CC + BCC. Each entry is `{"bucket": "from" | "to" | "cc" | "bcc", "address", "id", "name"}`; receivers should pair to the source field by `(bucket, address)` since the same address may legally appear in multiple buckets on a single send. `data["message"]["bcc_addresses"]` is populated only on outbound events (the sending mailbox owner already knows the BCC list); inbound payloads carry `None` (BCC is not visible to recipients).
+
 ### Phone webhooks
 
-Set an incoming call webhook URL and action on a phone number.
+Phone numbers have two independent webhook URLs:
+
+- `incoming_call_webhook_url` — receives the **flat, synchronous** inbound-call payload. Your response (`action: "answer" | "reject"` plus optional `client_websocket_url`) decides what happens to the call. Non-200 responses, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
+- `incoming_text_webhook_url` — receives **all five** text lifecycle events: `text.received` (inbound), and the four outbound transitions `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. Fire-and-forget.
 
 ```python
 # Route incoming calls to a webhook
@@ -730,8 +746,63 @@ inkbox.phone_numbers.update(
     number.id,
     incoming_call_action="webhook",
     incoming_call_webhook_url="https://example.com/calls",
+    incoming_text_webhook_url="https://example.com/texts",
 )
 ```
+
+The inbound-call payload is flat — no envelope — and carries a singular `contact: {"id", "name"} | None` at the top level. Text payloads use the standard envelope with `data["contact"]` (singular) and `data["text_message"]`. Each phone/text event has exactly one remote party, so the contact shape stays singular there; only mail uses the per-bucket list. The text-message body includes the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`) so receivers can act on outbound failures without a follow-up API call.
+
+### Receiving webhooks (typed)
+
+The SDK exports `TypedDict` wire shapes for every payload. Pair `verify_webhook` with `cast(TextWebhookPayload, json.loads(body))` and discriminate on `event_type`:
+
+```python
+import json
+from typing import cast
+
+from inkbox import (
+    MailWebhookPayload,
+    PhoneIncomingCallWebhookPayload,
+    TextWebhookPayload,
+    verify_webhook,
+)
+
+# FastAPI
+@app.post("/hooks/mail")
+async def mail_hook(request: Request):
+    raw_body = await request.body()
+    if not verify_webhook(payload=raw_body, headers=request.headers, secret="whsec_..."):
+        raise HTTPException(status_code=403)
+    payload = cast(MailWebhookPayload, json.loads(raw_body))
+    for match in payload["data"]["contacts"]:
+        logger.info(
+            "%s %s -> %s (%s)",
+            match["bucket"], match["address"], match["name"], match["id"],
+        )
+
+@app.post("/hooks/text")
+async def text_hook(request: Request):
+    raw_body = await request.body()
+    if not verify_webhook(payload=raw_body, headers=request.headers, secret="whsec_..."):
+        raise HTTPException(status_code=403)
+    payload = cast(TextWebhookPayload, json.loads(raw_body))
+    match payload["event_type"]:
+        case "text.delivery_failed":
+            msg = payload["data"]["text_message"]
+            logger.error(
+                "SMS to %s failed: %s (%s)",
+                msg["remote_phone_number"], msg["error_code"], msg["error_detail"],
+            )
+        case "text.delivered":
+            # delivery_status, sent_at, delivered_at are all populated.
+            ...
+        case "text.received":
+            contact = payload["data"]["contact"]
+            if contact is not None:
+                logger.info("inbound from known contact %s", contact["id"])
+```
+
+Wire shapes are intentionally **snake_case** (the raw JSON body, not the SDK's parsed dataclasses) so `json.loads(body)` round-trips into the `TypedDict` without a transformer. Enum-valued fields like `direction`, `status`, and `delivery_status` are `Literal[...]` string unions rather than the SDK's `StrEnum`s — `json.loads` produces bare strings, and `Literal` unions narrow cleanly under mypy / pyright.
 
 ---
 

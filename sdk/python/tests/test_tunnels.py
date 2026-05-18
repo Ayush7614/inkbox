@@ -79,13 +79,6 @@ def test_validate_rejects_consecutive_hyphens():
         validate_tunnel_name("my--agent")
 
 
-def test_validate_rejects_reserved_names():
-    with pytest.raises(TunnelNameInvalid):
-        validate_tunnel_name("admin")
-    with pytest.raises(TunnelNameInvalid):
-        validate_tunnel_name("openai")
-
-
 def test_validate_normalizes_at_prefix_and_case():
     assert validate_tunnel_name("@MyAgent") == "myagent"
     assert normalize_agent_handle("@FOO") == "foo"

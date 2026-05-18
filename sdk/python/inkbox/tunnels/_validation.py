@@ -1,18 +1,20 @@
 """
 inkbox/tunnels/_validation.py
 
-Local handle / tunnel-name validation. Mirrors the canonical server
-validator in ``~/servers/src/data_models/api_contracts/tunnel.py``.
-Handle and tunnel-name share a single global namespace; the same rules
-apply to both. :func:`validate_agent_handle` is an alias for callers who
-think of the value as an agent handle rather than a tunnel name.
+Local handle / tunnel-name validation. Mirrors the syntactic rules in
+the canonical server validator
+(``~/servers/src/data_models/api_contracts/tunnel.py``). Reserved-name
+collisions are NOT checked here — the server is authoritative and will
+return a 409 (``HandleUnavailableError``). Handle and tunnel-name share
+a single global namespace; the same rules apply to both.
+:func:`validate_agent_handle` is an alias for callers who think of the
+value as an agent handle rather than a tunnel name.
 """
 
 from __future__ import annotations
 
 import re
 
-from inkbox.tunnels._reserved_names import is_reserved_name
 from inkbox.tunnels.exceptions import TunnelNameInvalid
 
 _TUNNEL_NAME_MIN_LENGTH = 3
@@ -53,8 +55,6 @@ def validate_tunnel_name(name: str) -> str:
             "hyphens, must start and end with a letter or number, and must "
             "not contain consecutive hyphens",
         )
-    if is_reserved_name(normalized):
-        raise TunnelNameInvalid(f"tunnel_name '{normalized}' is reserved")
     return normalized
 
 

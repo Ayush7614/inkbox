@@ -1,0 +1,26 @@
+{
+  "event_type": "message.received",
+  "timestamp": "2026-04-10T18:13:42.201Z",
+  "data": {
+    "message": {
+      "id": "d490b2a7-2ac8-4c57-bbdd-438c844e11d7",
+      "mailbox_id": "73fdb447-4d3a-4a31-bf05-7373d6dfdf74",
+      "thread_id": "fef11c98-6f16-466b-b8d1-6019fc5b0183",
+      "message_id": "<abc123@example.com>",
+      "from_address": "customer@example.com",
+      "to_addresses": ["support@inkboxmail.com"],
+      "cc_addresses": ["legal@example.com"],
+      "bcc_addresses": null,
+      "subject": "Question about pricing",
+      "snippet": "Can you help me understand...",
+      "direction": "inbound",
+      "status": "received",
+      "has_attachments": false,
+      "created_at": "2026-04-10T18:13:42.104Z"
+    },
+    "contacts": [
+      {"bucket": "from", "address": "customer@example.com", "id": "550e8400-e29b-41d4-a716-446655440000", "name": "Jane Doe"},
+      {"bucket": "cc", "address": "legal@example.com", "id": "550e8400-e29b-41d4-a716-446655440001", "name": "Legal Team"}
+    ]
+  }
+}
