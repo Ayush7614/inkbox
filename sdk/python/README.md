@@ -737,7 +737,7 @@ Every payload uses the standard `{event_type, timestamp, data}` envelope. `data[
 
 Phone numbers have two independent webhook URLs:
 
-- `incoming_call_webhook_url` — receives the **flat, synchronous** inbound-call payload. Your response (`action: "answer" | "reject" | "ignore"` plus optional `client_websocket_url`) decides what happens to the call.
+- `incoming_call_webhook_url` — receives the **flat, synchronous** inbound-call payload. Your response (`action: "answer" | "reject"` plus optional `client_websocket_url`) decides what happens to the call. Non-200 responses, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
 - `incoming_text_webhook_url` — receives **all five** text lifecycle events: `text.received` (inbound), and the four outbound transitions `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. Fire-and-forget.
 
 ```python

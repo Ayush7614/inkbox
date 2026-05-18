@@ -765,7 +765,7 @@ Algorithm: HMAC-SHA256 over `"{requestId}.{timestamp}.{body}"`.
 
 - **Mail** (envelope, fire-and-forget): `message.received`, `message.sent`, `message.forwarded`, `message.delivered`, `message.bounced`, `message.failed`. All six fire on a mailbox's `webhookUrl`.
 - **Text** (envelope, fire-and-forget) — all five fire on a phone number's `incomingTextWebhookUrl`: `text.received`, `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. The text-message body carries the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`).
-- **Inbound call** (flat, synchronous): `PhoneIncomingCallWebhookPayload` on a phone number's `incomingCallWebhookUrl`. No `event_type`/`timestamp`/`data` envelope. The response (`action: answer | reject | ignore` + optional `clientWebsocketUrl`) decides the call's fate.
+- **Inbound call** (flat, synchronous): `PhoneIncomingCallWebhookPayload` on a phone number's `incomingCallWebhookUrl`. No `event_type`/`timestamp`/`data` envelope. The response (`action: "answer" | "reject"` + optional `clientWebsocketUrl`) decides the call's fate. Non-200 responses, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
 
 **Mail contact resolution:** `data.contacts` is a list of `{ bucket, address, id, name }` entries (always present, possibly empty). Inbound events resolve `from` + every `cc`; outbound events resolve every `to` + `cc` + `bcc`. Pair entries to the source field by `(bucket, address)` — the same address may appear in multiple buckets on a single send, producing one entry per bucket. Outbound payloads also carry `data.message.bcc_addresses` (`null` on inbound, since BCC is not visible to recipients).
 
