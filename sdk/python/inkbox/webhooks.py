@@ -87,9 +87,10 @@ class RateLimitInfoWire(TypedDict):
 
 class WebhookContact(TypedDict):
     """
-    Address-book match for the remote party. Optional on every payload --
-    ``None`` means no contact visible to the receiving identity. Pass
-    ``id`` to ``inkbox.contacts.get()`` to hydrate.
+    Address-book match for the single remote party on a phone or text
+    webhook event. Optional -- ``None`` means no contact visible to the
+    receiving identity. Pass ``id`` to ``inkbox.contacts.get()`` to
+    hydrate.
     """
     id: str
     name: str
@@ -106,11 +107,36 @@ MailWebhookEventType = Literal[
     "message.failed",
 ]
 
+MailContactBucket = Literal["from", "to", "cc", "bcc"]
+"""Which recipient list a mail webhook contact was matched from."""
+
+
+class WebhookMailContact(TypedDict):
+    """
+    Per-recipient address-book match on a mail webhook event.
+
+    Mail events resolve every relevant recipient (inbound: sender + CC;
+    outbound: every To + CC + BCC) and surface each match as its own
+    entry. Pair to the source field by ``(bucket, address)``, not by
+    ``address`` alone -- the same address may appear in multiple
+    buckets on a single send, producing one entry per bucket.
+    ``address`` echoes the original wire-form casing on
+    ``data["message"]["{from,to,cc,bcc}_addresses"]``, so naive ``==``
+    against that bucket array works for messages your platform sent.
+    The list is sparse: only matched recipients appear.
+    """
+    bucket: MailContactBucket
+    address: str
+    id: str
+    name: str
+
 
 class MailWebhookMessage(TypedDict):
     """
     Stored mail message. ``message_id`` is the RFC 5322 ``Message-ID``
     header value (not Inkbox's row id -- that's ``id``).
+    ``bcc_addresses`` is only populated on outbound events; inbound
+    payloads carry ``None`` (BCC is not visible to recipients).
     """
     id: str
     mailbox_id: str
@@ -119,6 +145,7 @@ class MailWebhookMessage(TypedDict):
     from_address: str
     to_addresses: list[str]
     cc_addresses: list[str] | None
+    bcc_addresses: list[str] | None
     subject: str | None
     snippet: str | None
     direction: MessageDirectionWire
@@ -128,8 +155,18 @@ class MailWebhookMessage(TypedDict):
 
 
 class MailWebhookData(TypedDict):
+    """
+    Wrapper under ``MailWebhookPayload.data``.
+
+    ``contacts`` is always present, possibly empty. Wire order is
+    ``from`` -> ``to`` -> ``cc`` -> ``bcc``, then within each bucket by
+    source-field order; receivers should pair by ``(bucket, address)``
+    rather than relying on the order. Up to 50 distinct normalized
+    addresses are resolved per event; over-cap inputs and resolver
+    failures both fall back to an empty list.
+    """
     message: MailWebhookMessage
-    contact: WebhookContact | None
+    contacts: list[WebhookMailContact]
 
 
 class MailWebhookPayload(TypedDict):

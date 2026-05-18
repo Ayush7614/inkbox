@@ -13,7 +13,7 @@ import type {
   MailWebhookPayload,
   PhoneIncomingCallWebhookPayload,
   TextWebhookPayload,
-  WebhookContact,
+  WebhookMailContact,
 } from "../src/index.js";
 
 const FIXTURES_DIR = join(__dirname, "..", "..", "..", "tests", "fixtures", "webhook_payloads");
@@ -69,18 +69,45 @@ describe("MailWebhookPayload", () => {
     expect(["inbound", "outbound"]).toContain(payload.data.message.direction);
   });
 
-  it("discriminates contact: null vs WebhookContact", () => {
-    const received = loadFixture<MailWebhookPayload>("message_received.json");
-    expect(received.data.contact).not.toBeNull();
-    // The non-null branch narrows to WebhookContact.
-    const contact: WebhookContact | null = received.data.contact;
-    if (contact !== null) {
-      expect(contact.id).toBeTypeOf("string");
-      expect(contact.name).toBeTypeOf("string");
+  it("data.contacts is always present (possibly empty)", () => {
+    for (const file of mailEvents) {
+      const payload = loadFixture<MailWebhookPayload>(file);
+      expect(Array.isArray(payload.data.contacts)).toBe(true);
     }
+  });
 
+  it("inbound carries from + cc matches with bucket-paired entries", () => {
+    const received = loadFixture<MailWebhookPayload>("message_received.json");
+    expect(received.data.contacts).toHaveLength(2);
+    const [first, second]: WebhookMailContact[] = received.data.contacts;
+    expect(first.bucket).toBe("from");
+    expect(first.address).toBe(received.data.message.from_address);
+    expect(first.id).toBeTypeOf("string");
+    expect(first.name).toBeTypeOf("string");
+    expect(second.bucket).toBe("cc");
+    expect(received.data.message.cc_addresses).not.toBeNull();
+    expect(received.data.message.cc_addresses).toContain(second.address);
+  });
+
+  it("outbound carries to + cc + bcc matches", () => {
     const sent = loadFixture<MailWebhookPayload>("message_sent.json");
-    expect(sent.data.contact).toBeNull();
+    const buckets = sent.data.contacts.map((c) => c.bucket);
+    expect(buckets).toStrictEqual(["to", "cc", "bcc"]);
+    const bcc = sent.data.contacts.find((c) => c.bucket === "bcc");
+    expect(bcc?.address).toBe("audit@inkboxmail.com");
+    expect(sent.data.message.bcc_addresses).toContain("audit@inkboxmail.com");
+  });
+
+  it("represents an unmatched send as contacts: []", () => {
+    const forwarded = loadFixture<MailWebhookPayload>("message_forwarded.json");
+    expect(forwarded.data.contacts).toStrictEqual([]);
+  });
+
+  it("bcc_addresses is null on inbound and a string[] on outbound when populated", () => {
+    const inbound = loadFixture<MailWebhookPayload>("message_received.json");
+    expect(inbound.data.message.bcc_addresses).toBeNull();
+    const outbound = loadFixture<MailWebhookPayload>("message_sent.json");
+    expect(outbound.data.message.bcc_addresses).toStrictEqual(["audit@inkboxmail.com"]);
   });
 
   it("narrows event_type via switch", () => {

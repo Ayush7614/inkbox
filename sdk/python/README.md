@@ -731,7 +731,7 @@ The same URL receives all six mail event types:
 | `message.bounced` | Downstream delivery bounced. |
 | `message.failed` | Delivery ultimately failed. |
 
-Every payload uses the standard `{event_type, timestamp, data}` envelope, and `data["contact"]` carries an optional `{"id", "name"}` address-book match for the remote party — scoped to the identity that owns the receiving mailbox; `None` when no visible address-book entry matches.
+Every payload uses the standard `{event_type, timestamp, data}` envelope. `data["contacts"]` is a list of address-book matches (always present, possibly empty) — inbound events resolve the sender plus every CC, outbound events resolve every To + CC + BCC. Each entry is `{"bucket": "from" | "to" | "cc" | "bcc", "address", "id", "name"}`; receivers should pair to the source field by `(bucket, address)` since the same address may legally appear in multiple buckets on a single send. `data["message"]["bcc_addresses"]` is populated only on outbound events (the sending mailbox owner already knows the BCC list); inbound payloads carry `None` (BCC is not visible to recipients).
 
 ### Phone webhooks
 
@@ -750,7 +750,7 @@ inkbox.phone_numbers.update(
 )
 ```
 
-The inbound-call payload is flat — no envelope — and carries `contact` at the top level. Text payloads use the standard envelope with `data["contact"]` and `data["text_message"]`. The text-message body includes the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`) so receivers can act on outbound failures without a follow-up API call.
+The inbound-call payload is flat — no envelope — and carries a singular `contact: {"id", "name"} | None` at the top level. Text payloads use the standard envelope with `data["contact"]` (singular) and `data["text_message"]`. Each phone/text event has exactly one remote party, so the contact shape stays singular there; only mail uses the per-bucket list. The text-message body includes the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`) so receivers can act on outbound failures without a follow-up API call.
 
 ### Receiving webhooks (typed)
 
@@ -768,6 +768,18 @@ from inkbox import (
 )
 
 # FastAPI
+@app.post("/hooks/mail")
+async def mail_hook(request: Request):
+    raw_body = await request.body()
+    if not verify_webhook(payload=raw_body, headers=request.headers, secret="whsec_..."):
+        raise HTTPException(status_code=403)
+    payload = cast(MailWebhookPayload, json.loads(raw_body))
+    for match in payload["data"]["contacts"]:
+        logger.info(
+            "%s %s -> %s (%s)",
+            match["bucket"], match["address"], match["name"], match["id"],
+        )
+
 @app.post("/hooks/text")
 async def text_hook(request: Request):
     raw_body = await request.body()

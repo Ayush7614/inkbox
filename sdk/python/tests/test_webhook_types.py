@@ -18,7 +18,7 @@ from inkbox import (
     MailWebhookPayload,
     PhoneIncomingCallWebhookPayload,
     TextWebhookPayload,
-    WebhookContact,
+    WebhookMailContact,
 )
 
 # Repo layout: sdk/python/tests/test_webhook_types.py -> sdk/python/tests
@@ -88,28 +88,64 @@ def test_mail_payload_parses(fixture: str):
     assert message["direction"] in ("inbound", "outbound")
 
 
-def test_mail_contact_discriminates_null_vs_object():
-    received = cast(MailWebhookPayload, _load("message_received.json"))
-    contact = received["data"]["contact"]
-    assert contact is not None
-    matched: WebhookContact = contact
-    assert isinstance(matched["id"], str)
-    assert isinstance(matched["name"], str)
+def test_mail_contacts_always_present_as_list():
+    for fixture in MAIL_FIXTURES:
+        payload = cast(MailWebhookPayload, _load(fixture))
+        assert isinstance(payload["data"]["contacts"], list), fixture
 
+
+def test_inbound_carries_from_plus_cc_matches():
+    received = cast(MailWebhookPayload, _load("message_received.json"))
+    contacts: list[WebhookMailContact] = received["data"]["contacts"]
+    assert [c["bucket"] for c in contacts] == ["from", "cc"]
+    assert contacts[0]["address"] == received["data"]["message"]["from_address"]
+    assert isinstance(contacts[0]["id"], str)
+    assert isinstance(contacts[0]["name"], str)
+    cc_addresses = received["data"]["message"]["cc_addresses"]
+    assert cc_addresses is not None
+    assert contacts[1]["address"] in cc_addresses
+
+
+def test_outbound_carries_to_cc_bcc_matches():
     sent = cast(MailWebhookPayload, _load("message_sent.json"))
-    assert sent["data"]["contact"] is None
+    buckets = [c["bucket"] for c in sent["data"]["contacts"]]
+    assert buckets == ["to", "cc", "bcc"]
+    bcc_entry = next(c for c in sent["data"]["contacts"] if c["bucket"] == "bcc")
+    assert bcc_entry["address"] == "audit@inkboxmail.com"
+    assert sent["data"]["message"]["bcc_addresses"] == ["audit@inkboxmail.com"]
+
+
+def test_unmatched_send_is_empty_contacts_list():
+    forwarded = cast(MailWebhookPayload, _load("message_forwarded.json"))
+    assert forwarded["data"]["contacts"] == []
+
+
+def test_bcc_addresses_null_on_inbound_populated_on_outbound():
+    inbound = cast(MailWebhookPayload, _load("message_received.json"))
+    assert inbound["data"]["message"]["bcc_addresses"] is None
+    outbound = cast(MailWebhookPayload, _load("message_sent.json"))
+    assert outbound["data"]["message"]["bcc_addresses"] == ["audit@inkboxmail.com"]
 
 
 def test_mail_required_fields_present_on_every_event():
     required = {
         "id", "mailbox_id", "thread_id", "message_id",
-        "from_address", "to_addresses", "cc_addresses",
+        "from_address", "to_addresses", "cc_addresses", "bcc_addresses",
         "subject", "snippet", "direction", "status",
         "has_attachments", "created_at",
     }
     for fixture in MAIL_FIXTURES:
         payload = cast(MailWebhookPayload, _load(fixture))
         assert set(payload["data"]["message"].keys()) == required, fixture
+
+
+def test_mail_contact_entries_have_required_keys():
+    required = {"bucket", "address", "id", "name"}
+    for fixture in MAIL_FIXTURES:
+        payload = cast(MailWebhookPayload, _load(fixture))
+        for entry in payload["data"]["contacts"]:
+            assert set(entry.keys()) == required, (fixture, entry)
+            assert entry["bucket"] in ("from", "to", "cc", "bcc")
 
 
 # ---- Text ______________________________________________________________

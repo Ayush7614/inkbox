@@ -168,6 +168,7 @@ from inkbox.webhooks import (
     CallDirectionWire,
     CallStatusWire,
     HangupReasonWire,
+    MailContactBucket,
     MailWebhookData,
     MailWebhookEventType,
     MailWebhookMessage,
@@ -186,6 +187,7 @@ from inkbox.webhooks import (
     TextWebhookMessage,
     TextWebhookPayload,
     WebhookContact,
+    WebhookMailContact,
 )
 
 # API keys
@@ -322,6 +324,7 @@ __all__ = [
     "CallDirectionWire",
     "CallStatusWire",
     "HangupReasonWire",
+    "MailContactBucket",
     "MailWebhookData",
     "MailWebhookEventType",
     "MailWebhookMessage",
@@ -340,6 +343,7 @@ __all__ = [
     "TextWebhookMessage",
     "TextWebhookPayload",
     "WebhookContact",
+    "WebhookMailContact",
     # API keys
     "ApiKey",
     "ApiKeyStatus",

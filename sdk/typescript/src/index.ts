@@ -34,6 +34,8 @@ export type { SigningKey } from "./signing_keys.js";
 export { verifyWebhook } from "./signing_keys.js";
 export type {
   WebhookContact,
+  WebhookMailContact,
+  MailContactBucket,
   MailWebhookPayload,
   MailWebhookEventType,
   MailWebhookMessage,

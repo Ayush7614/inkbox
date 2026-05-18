@@ -767,9 +767,11 @@ Algorithm: HMAC-SHA256 over `"{requestId}.{timestamp}.{body}"`.
 - **Text** (envelope, fire-and-forget) — all five fire on a phone number's `incomingTextWebhookUrl`: `text.received`, `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. The text-message body carries the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`).
 - **Inbound call** (flat, synchronous): `PhoneIncomingCallWebhookPayload` on a phone number's `incomingCallWebhookUrl`. No `event_type`/`timestamp`/`data` envelope. The response (`action: answer | reject | ignore` + optional `clientWebsocketUrl`) decides the call's fate.
 
-**`data.contact` (mail/text) and top-level `contact` (calls):** an optional `{ id, name }` address-book match for the remote party — scoped to the identity that owns the receiving mailbox/phone number; `null` when no visible address-book entry matches. Match key: inbound mail → `from_address`, outbound mail → `to_addresses[0]` (CC/BCC-only sends → `null`), text → `remote_phone_number`, inbound call → `remote_phone_number`.
+**Mail contact resolution:** `data.contacts` is a list of `{ bucket, address, id, name }` entries (always present, possibly empty). Inbound events resolve `from` + every `cc`; outbound events resolve every `to` + `cc` + `bcc`. Pair entries to the source field by `(bucket, address)` — the same address may appear in multiple buckets on a single send, producing one entry per bucket. Outbound payloads also carry `data.message.bcc_addresses` (`null` on inbound, since BCC is not visible to recipients).
 
-Exported wire types: `MailWebhookPayload`, `TextWebhookPayload`, `PhoneIncomingCallWebhookPayload`, `WebhookContact`, plus event-type string unions (`MailWebhookEventType`, `TextWebhookEventType`) and wire enums (`MessageStatus`, `CallStatusWire`, `HangupReasonWire`, `SmsDeliveryStatusWire`, etc.). All fields are snake_case to match the raw JSON body.
+**Phone/text contact resolution:** `data.contact` (text) and top-level `contact` (inbound call) is a singular `{ id, name } | null` for the single remote party (`remote_phone_number`). Scoped to the identity that owns the receiving phone number; `null` when no visible address-book entry matches.
+
+Exported wire types: `MailWebhookPayload`, `TextWebhookPayload`, `PhoneIncomingCallWebhookPayload`, `WebhookContact` (phone/text), `WebhookMailContact` + `MailContactBucket` (mail), plus event-type string unions (`MailWebhookEventType`, `TextWebhookEventType`) and wire enums (`MessageStatus`, `CallStatusWire`, `HangupReasonWire`, `SmsDeliveryStatusWire`, etc.). All fields are snake_case to match the raw JSON body.
 
 ## Error Handling
 

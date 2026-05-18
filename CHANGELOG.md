@@ -9,13 +9,14 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 ### Added
 
 - Typed receiver-side webhook payload models: `WebhookContact`,
-  `MailWebhookPayload`, `TextWebhookPayload`, and
-  `PhoneIncomingCallWebhookPayload`, plus their event-type string
-  unions and the supporting string-literal wire enums (`MessageStatus`,
-  `MessageDirectionWire`, `TextDirectionWire`, `TextTypeWire`,
-  `SmsDeliveryStatusWire`, `TextMessageOriginWire`, `CallStatusWire`,
-  `HangupReasonWire`, `CallDirectionWire`) and snake_case nested wire
-  shapes (`RawTextMediaItem`, `RawRateLimitInfo` on the TS side;
+  `WebhookMailContact`, `MailContactBucket`, `MailWebhookPayload`,
+  `TextWebhookPayload`, and `PhoneIncomingCallWebhookPayload`, plus
+  their event-type string unions and the supporting string-literal
+  wire enums (`MessageStatus`, `MessageDirectionWire`,
+  `TextDirectionWire`, `TextTypeWire`, `SmsDeliveryStatusWire`,
+  `TextMessageOriginWire`, `CallStatusWire`, `HangupReasonWire`,
+  `CallDirectionWire`) and snake_case nested wire shapes
+  (`RawTextMediaItem`, `RawRateLimitInfo` on the TS side;
   `TextMediaItemWire`, `RateLimitInfoWire` on the Python side). Lets
   app code parse and narrow webhook bodies without hand-rolling
   shapes.
@@ -27,12 +28,22 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
   `data.text_message` carries the full outbound lifecycle metadata
   (`delivery_status`, `error_code`, `error_detail`, `sent_at`,
   `delivered_at`, `failed_at`).
-- All outbound webhook payloads now carry a `contact` field — an
-  optional `{ id, name }` address-book match for the remote party,
-  scoped to the receiving channel's `identity_id` via the
-  `contact_access` model (wildcard sentinel or explicit grant; oldest
-  match by `created_at` wins). `data.contact` on mail and text,
-  top-level `contact` on the inbound call payload.
+- Mail webhook payloads carry `data.contacts`, a list of per-recipient
+  address-book matches scoped to the identity that owns the receiving
+  mailbox. Inbound events resolve the sender plus every CC; outbound
+  events resolve every To + CC + BCC. Each entry is
+  `{ bucket: "from" | "to" | "cc" | "bcc", address, id, name }`; pair
+  to the source field by `(bucket, address)` since the same address
+  may legally appear in multiple buckets. List is always present,
+  possibly empty.
+- New `data.message.bcc_addresses: list[str] | null` on mail webhook
+  payloads. Populated on outbound events; `null` on inbound (BCC is
+  not visible to recipients).
+- Phone and text webhook payloads carry `data.contact` (text) and a
+  top-level `contact` (inbound call): singular `{ id, name } | null`
+  for the single remote party, scoped to the identity that owns the
+  receiving phone number; `null` when no visible address-book entry
+  matches.
 
 ### Changed
 
@@ -64,12 +75,10 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 ## 0.4.0
 
 Breaking-changes release. The repo is still sub-1.0 so the version is
-0.4.0 rather than 1.0.0, but the breakage is real — this changeset is
-paired with the servers
-`update-data-models` migration (alembic revision `043`) that locks the
-**identity ↔ mailbox ↔ tunnel** triad into a strict 1:1:1 invariant.
-The handle is now globally unique across all orgs and shares its
-namespace with `tunnel_name`.
+0.4.0 rather than 1.0.0, but the breakage is real — the
+**identity ↔ mailbox ↔ tunnel** triad is now locked into a strict
+1:1:1 invariant. The handle is globally unique across all orgs and
+shares its namespace with `tunnel_name`.
 
 ### Removed
 
