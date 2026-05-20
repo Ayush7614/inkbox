@@ -154,7 +154,7 @@ identity.update(description=None)  # clear
 # Release the phone number (vendor + local).
 identity.unlink_phone_number()
 
-# Delete (cascades to mailbox + tunnel; revokes scoped API keys).
+# Delete (cascades to mailbox + tunnel + phone-number release; revokes scoped API keys).
 identity.delete()
 ```
 

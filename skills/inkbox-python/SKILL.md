@@ -73,7 +73,7 @@ identities = inkbox.list_identities()  # → list[AgentIdentitySummary]
 identity.update(new_handle="new-name")   # rename
 identity.update(status="paused")         # or "active"
 identity.refresh()                       # re-fetch from API, updates cached channels
-identity.delete()                        # unlinks channels
+identity.delete()                        # cascades: mailbox + tunnel + phone-number release
 ```
 
 ## Channel Management

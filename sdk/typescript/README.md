@@ -157,11 +157,11 @@ const allIdentities = await inkbox.listIdentities();
 await identity.update({ status: "paused" });
 await identity.update({ newHandle: "sales-bot-v2" });
 
-// Unlink phone number (without releasing it). Mailbox is 1:1 with the
-// identity and cannot be unlinked — delete the identity instead.
+// Release the phone number (carrier release + soft-delete). Mailbox and
+// tunnel are 1:1 with the identity and can only be removed by deleting it.
 await identity.unlinkPhoneNumber();
 
-// Delete
+// Delete (cascades to mailbox + tunnel + phone-number release; revokes scoped API keys).
 await identity.delete();
 ```
 

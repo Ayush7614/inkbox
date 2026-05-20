@@ -105,7 +105,7 @@ const identities = await inkbox.listIdentities();   // AgentIdentitySummary[]
 await identity.update({ newHandle: "new-name" });   // rename
 await identity.update({ status: "paused" });         // or "active"
 await identity.refresh();                            // re-fetch from API, updates cached channels
-await identity.delete();                             // unlinks channels
+await identity.delete();                             // cascades: mailbox + tunnel + phone-number release
 ```
 
 If `INKBOX_AGENT_HANDLE` is not configured, ask the user for the handle to use.

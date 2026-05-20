@@ -609,7 +609,7 @@ export class AgentIdentity {
    *
    * Cascades: flips the linked mailbox to `deleted`, force-finalizes the
    * linked tunnel to `deleted`, revokes any identity-scoped API keys, and
-   * unassigns (but does not delete) any linked phone number.
+   * releases any linked phone number (vendor + local).
    */
   async delete(): Promise<void> {
     await this._inkbox._idsResource.delete(this.agentHandle);
