@@ -187,8 +187,18 @@ from inkbox.webhooks import (
     TextWebhookEventType,
     TextWebhookMessage,
     TextWebhookPayload,
+    WebhookAgentIdentity,
     WebhookContact,
+    WebhookMailAgentIdentity,
     WebhookMailContact,
+    WebhookRecipient,
+)
+
+# Webhook subscription resource (CRUD)
+from inkbox.webhook_subscriptions import (
+    WebhookSubscription,
+    WebhookSubscriptionsResource,
+    WebhookSubscriptionStatus,
 )
 
 # API keys
@@ -344,8 +354,15 @@ __all__ = [
     "TextWebhookEventType",
     "TextWebhookMessage",
     "TextWebhookPayload",
+    "WebhookAgentIdentity",
     "WebhookContact",
+    "WebhookMailAgentIdentity",
     "WebhookMailContact",
+    "WebhookRecipient",
+    # Webhook subscriptions
+    "WebhookSubscription",
+    "WebhookSubscriptionsResource",
+    "WebhookSubscriptionStatus",
     # API keys
     "ApiKey",
     "ApiKeyStatus",

@@ -259,8 +259,9 @@ Always confirm before placing a call.
 
 ```typescript
 // Send an SMS from this identity's phone number.
-// Returns a queued TextMessage; final delivery state arrives via the
-// incomingTextWebhookUrl configured on the sender.
+// Returns a queued TextMessage; final delivery state arrives via any
+// webhook subscription on the sender's phone number whose eventTypes
+// include the text.* lifecycle events.
 const sent = await identity.sendText({
   to: "+15551234567",
   text: "Hello from Inkbox",
@@ -502,8 +503,7 @@ const mailbox   = await inkbox.mailboxes.get("abc@inkboxmail.com");
 
 // To rename, use `identity.update({ displayName: "New Name" })` —
 // the mailbox PATCH endpoint hard-rejects `display_name` with a 422.
-await inkbox.mailboxes.update(mailbox.emailAddress, { webhookUrl: "https://example.com/hook" });
-await inkbox.mailboxes.update(mailbox.emailAddress, { webhookUrl: null });   // remove webhook
+// To attach a webhook receiver, see "Webhooks" below.
 
 // Admin-only: flip the contact-rule filter mode for this mailbox
 const updated = await inkbox.mailboxes.update(mailbox.emailAddress, { filterMode: "whitelist" });
@@ -748,15 +748,17 @@ Algorithm: HMAC-SHA256 over `"{requestId}.{timestamp}.{body}"`.
 
 **Event taxonomy:**
 
-- **Mail** (envelope, fire-and-forget): `message.received`, `message.sent`, `message.forwarded`, `message.delivered`, `message.bounced`, `message.failed`. All six fire on a mailbox's `webhookUrl`.
-- **Text** (envelope, fire-and-forget) — all five fire on a phone number's `incomingTextWebhookUrl`: `text.received`, `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. The text-message body carries the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`).
-- **Inbound call** (flat, synchronous): `PhoneIncomingCallWebhookPayload` on a phone number's `incomingCallWebhookUrl`. No `event_type`/`timestamp`/`data` envelope. The response (`action: "answer" | "reject"` + optional `clientWebsocketUrl`) decides the call's fate. Non-200 responses, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
+- **Mail** (envelope, fire-and-forget) — `message.received`, `message.sent`, `message.forwarded`, `message.delivered`, `message.bounced`, `message.failed`. Subscribe via `inkbox.webhooks.subscriptions.create({ mailboxId, url, eventTypes })`.
+- **Text** (envelope, fire-and-forget) — `text.received`, `text.sent`, `text.delivered`, `text.delivery_failed`, `text.delivery_unconfirmed`. Subscribe via `inkbox.webhooks.subscriptions.create({ phoneNumberId, url, eventTypes })`. The text-message body carries the full delivery-state block (`delivery_status`, `error_code`, `error_detail`, `sent_at`, `delivered_at`, `failed_at`) on 1:1 traffic; on group outbound those top-level fields are `null` and per-recipient state lives in `recipients[]`.
+- **Inbound call** (flat, synchronous) — `PhoneIncomingCallWebhookPayload` on a phone number's `incomingCallWebhookUrl`. Not subscribable; the URL stays on the phone-number resource because the response (`action: "answer" | "reject"` + optional `clientWebsocketUrl`) decides the call's fate. Non-200, invalid bodies, and timeouts are treated as "decline routing" by Inkbox.
 
-**Mail contact resolution:** `data.contacts` is a list of `{ bucket, address, id, name }` entries (always present, possibly empty). Inbound events resolve `from` + every `cc`; outbound events resolve every `to` + `cc` + `bcc`. Pair entries to the source field by `(bucket, address)` — the same address may appear in multiple buckets on a single send, producing one entry per bucket. Outbound payloads also carry `data.message.bcc_addresses` (`null` on inbound, since BCC is not visible to recipients).
+**Subscription resource:** `inkbox.webhooks.subscriptions.{list,get,create,update,delete}`. Each subscription names exactly one owner (mailbox **or** phone number), one HTTPS destination URL, and a non-empty subset of the catalog's event types. Multiple subscriptions on the same owner fan out independently. The SDK mirrors the server's validators client-side: exactly-one-FK, non-empty distinct events, no `phone.incoming_call`, channel coherence (`message.*` for mailboxes, `text.*` for phone numbers).
 
-**Phone/text contact resolution:** `data.contact` (text) and top-level `contact` (inbound call) is a singular `{ id, name } | null` for the single remote party (`remote_phone_number`). Scoped to the identity that owns the receiving phone number; `null` when no visible address-book entry matches.
+**Mail contact / identity resolution:** `data.contacts` and `data.agent_identities` are lists of `{ bucket, address, id, ... }` entries (always present, possibly empty). Inbound events resolve `from` + every `cc`; outbound events resolve every `to` + `cc` + `bcc`. Pair entries to the source field by `(bucket, address)`. Outbound payloads also carry `data.message.bcc_addresses` (`null` on inbound, since BCC is not visible to recipients).
 
-Exported wire types: `MailWebhookPayload`, `TextWebhookPayload`, `PhoneIncomingCallWebhookPayload`, `WebhookContact` (phone/text), `WebhookMailContact` + `MailContactBucket` (mail), plus event-type string unions (`MailWebhookEventType`, `TextWebhookEventType`) and wire enums (`MessageStatus`, `CallStatusWire`, `HangupReasonWire`, `SmsDeliveryStatusWire`, etc.). All fields are snake_case to match the raw JSON body.
+**Phone/text contact / identity resolution:** `data.contacts` (text) and top-level `contacts` (inbound call) are lists of `{ id, name }` matches; `data.agent_identities` mirrors that for matched agent identities. Scoped to the identity that owns the receiving phone number; both default to `[]` when nothing matches.
+
+Exported wire types: `MailWebhookPayload`, `TextWebhookPayload`, `PhoneIncomingCallWebhookPayload`, `WebhookContact`, `WebhookAgentIdentity`, `WebhookMailContact`, `WebhookMailAgentIdentity`, `WebhookRecipient`, plus event-type string unions (`MailWebhookEventType`, `TextWebhookEventType`) and wire enums (`MessageStatus`, `CallStatusWire`, `HangupReasonWire`, `SmsDeliveryStatusWire`, etc.). All fields are snake_case to match the raw JSON body.
 
 ## Error Handling
 

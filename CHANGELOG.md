@@ -4,6 +4,24 @@ All notable changes to the Inkbox SDK, CLI, and skills live here.
 Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 (Python), and `@inkbox/cli`.
 
+## Unreleased — webhook subscriptions refactor
+
+### Breaking
+
+- **Per-resource webhook URLs are gone for mail and phone-text events.** `Mailbox.webhook_url` / `webhookUrl` and `PhoneNumber.incoming_text_webhook_url` / `incomingTextWebhookUrl` were removed from every SDK type, builder, request body, and CLI flag. Sending the legacy fields server-side returns 422. Replace each with a row on the new `webhooks.subscriptions` resource.
+- **Phone-text and inbound-call webhook payloads — `contact` (singular) → `contacts` (plural) + new `agent_identities` list.** Always-present lists; both default to `[]` when nothing matches.
+- **`TextWebhookMessage.remote_phone_number` is now nullable** (`null` on group outbound rows, where per-recipient state lives in `recipients[]`). Mail payloads gained `data.agent_identities` alongside existing `data.contacts`.
+
+### Added
+
+- **Webhook subscriptions resource** — full CRUD over `/webhooks/subscriptions`:
+  - TypeScript: `inkbox.webhooks.subscriptions.{list,get,create,update,delete}`.
+  - Python: `inkbox.webhooks.subscriptions.{list,get,create,update,delete}`.
+  - CLI: `inkbox webhook subscription {list,get,create,update,delete}` with a repeatable `--event-type`.
+  Each subscription names exactly one owner (mailbox **or** phone number), one HTTPS destination URL, and a non-empty subset of the catalog's event types. Multiple subscriptions on the same owner fan out independently. `phone.incoming_call` is intentionally not subscribable; that URL stays on the phone number's `incomingCallWebhookUrl` because its response body controls call routing. The SDK mirrors all four server validators client-side so typos surface as a thrown error.
+- **`WebhookAgentIdentity`, `WebhookMailAgentIdentity`, `WebhookRecipient`** exported types covering identity matches and per-recipient group-text state.
+- **Group-text additions to `TextWebhookMessage`:** `conversation_id`, `sender_phone_number`, `recipients`. Plus top-level `data.recipient_phone_number` on `TextWebhookPayload` identifying which recipient an outbound lifecycle event is about.
+
 ## 0.4.4
 
 ### Added

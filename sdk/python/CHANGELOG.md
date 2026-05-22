@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased — webhook subscriptions refactor
+
+### Breaking
+
+- **`Mailbox.webhook_url` removed.** Mailbox PATCH no longer accepts `webhook_url`; sending it returns 422. Migration: create a `webhooks.subscriptions` row for each mailbox that needs delivery (see Added below).
+- **`PhoneNumber.incoming_text_webhook_url` removed** from every shape that carried it (`PhoneNumber`, `IdentityPhoneNumber`, `IdentityPhoneNumberCreateOptions`, `phone_numbers.update`, `phone_numbers.provision`, identity-create's nested `phone_number`). Sending it returns 422 server-side. Replace with a `text.*` subscription on the phone number.
+- **Phone-text webhook payload — `data["contact"]` → `data["contacts"]` + `data["agent_identities"]`.** `contact` is gone. `contacts` is always a list (possibly empty); `agent_identities` is a new always-present list of matched agent identities.
+- **Inbound-call webhook payload — top-level `contact` → `contacts` + `agent_identities`.** Same shape swap at the top level of the flat payload.
+- **`TextWebhookMessage["remote_phone_number"]` is now nullable.** Populated on inbound and 1:1 outbound; `None` on group outbound rows (the per-recipient state lives in `recipients[]`).
+- **Mail webhook payload — `data["agent_identities"]` is now required on the wire** alongside the existing `data["contacts"]` (both default `[]`). Receivers that did strict shape checks will see a new key.
+
+### Added
+
+- **`inkbox.webhooks.subscriptions` resource** — full CRUD for the new `/webhooks/subscriptions` endpoint surface. `list`, `get`, `create`, `update`, `delete`. The SDK mirrors all four server validators client-side (exactly-one FK, non-empty distinct events, no `phone.incoming_call`, channel coherence) so typos surface as `ValueError` rather than 422 round-trips. New exports: `WebhookSubscription`, `WebhookSubscriptionsResource`, `WebhookSubscriptionStatus`.
+- **`WebhookAgentIdentity` / `WebhookMailAgentIdentity`** TypedDicts covering identity matches on text/call and mail payloads. Same shape as the contact types but with `agent_handle` / `display_name` instead of `name`. Mail variant also carries `bucket` + `address`.
+- **Group-text fields on `TextWebhookMessage`:** `conversation_id`, `sender_phone_number`, `recipients: list[WebhookRecipient] | None`. `recipients` is `None` on inbound, one entry on outbound 1:1 (legacy lifecycle fields hoisted from that single entry), multiple entries on group outbound (legacy fields stay `None`). New exported `WebhookRecipient` TypedDict.
+- **`data["recipient_phone_number"]` on `TextWebhookPayload`** identifies which recipient an outbound lifecycle event is about. `None` on inbound and 1:1 outbound.
+
 ## 0.4.4
 
 ### Added

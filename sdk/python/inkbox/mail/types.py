@@ -165,7 +165,6 @@ class Mailbox:
 
     id: UUID
     email_address: str
-    webhook_url: str | None
     filter_mode: FilterMode
     created_at: datetime
     updated_at: datetime
@@ -186,7 +185,6 @@ class Mailbox:
             id=UUID(d["id"]),
             email_address=d["email_address"],
             sending_domain=sending_domain,
-            webhook_url=d.get("webhook_url"),
             filter_mode=FilterMode(d.get("filter_mode", "blacklist")),
             created_at=datetime.fromisoformat(d["created_at"]),
             updated_at=datetime.fromisoformat(d["updated_at"]),

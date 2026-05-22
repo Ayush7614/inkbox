@@ -44,3 +44,6 @@ uv.lock
 # OS
 .DS_Store
 Thumbs.db
+
+# One-off planning docs that must never land in git history.
+update-for-webhook-subs.md

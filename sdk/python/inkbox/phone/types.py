@@ -88,7 +88,6 @@ class PhoneNumber:
     incoming_call_action: str
     client_websocket_url: str | None
     incoming_call_webhook_url: str | None
-    incoming_text_webhook_url: str | None
     filter_mode: FilterMode
     created_at: datetime
     updated_at: datetime
@@ -117,7 +116,6 @@ class PhoneNumber:
             incoming_call_action=d["incoming_call_action"],
             client_websocket_url=d.get("client_websocket_url"),
             incoming_call_webhook_url=d.get("incoming_call_webhook_url"),
-            incoming_text_webhook_url=d.get("incoming_text_webhook_url"),
             filter_mode=FilterMode(d.get("filter_mode", "blacklist")),
             created_at=datetime.fromisoformat(d["created_at"]),
             updated_at=datetime.fromisoformat(d["updated_at"]),

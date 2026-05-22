@@ -124,7 +124,6 @@ export interface Mailbox {
    * verified custom domain.
    */
   sendingDomain: string;
-  webhookUrl: string | null;
   filterMode: FilterMode;
   /**
    * UUID of the owning agent identity. Non-null for live customer
@@ -208,7 +207,6 @@ export interface RawMailbox {
   id: string;
   email_address: string;
   sending_domain?: string;
-  webhook_url: string | null;
   filter_mode?: string;
   agent_identity_id?: string | null;
   filter_mode_change_notice?: RawFilterModeChangeNotice | null;
@@ -300,7 +298,6 @@ export function parseMailbox(r: RawMailbox): Mailbox {
     id: r.id,
     emailAddress: r.email_address,
     sendingDomain: r.sending_domain ?? r.email_address.split("@")[1] ?? "",
-    webhookUrl: r.webhook_url,
     filterMode: (r.filter_mode as FilterMode) ?? FilterMode.BLACKLIST,
     agentIdentityId: r.agent_identity_id ?? null,
     createdAt: new Date(r.created_at),

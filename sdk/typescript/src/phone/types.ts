@@ -72,7 +72,6 @@ export interface PhoneNumber {
   incomingCallAction: string;
   clientWebsocketUrl: string | null;
   incomingCallWebhookUrl: string | null;
-  incomingTextWebhookUrl: string | null;
   filterMode: FilterMode;
   /**
    * 2-letter US state abbreviation for LOCAL numbers (e.g. `"NY"`);
@@ -245,7 +244,6 @@ export interface RawPhoneNumber {
   incoming_call_action: string;
   client_websocket_url: string | null;
   incoming_call_webhook_url: string | null;
-  incoming_text_webhook_url: string | null;
   filter_mode?: string;
   state?: string | null;
   agent_identity_id?: string | null;
@@ -375,7 +373,6 @@ export function parsePhoneNumber(r: RawPhoneNumber): PhoneNumber {
     incomingCallAction: r.incoming_call_action,
     clientWebsocketUrl: r.client_websocket_url,
     incomingCallWebhookUrl: r.incoming_call_webhook_url,
-    incomingTextWebhookUrl: r.incoming_text_webhook_url,
     filterMode: (r.filter_mode as FilterMode) ?? FilterModeEnum.BLACKLIST,
     state: r.state ?? null,
     agentIdentityId: r.agent_identity_id ?? null,
