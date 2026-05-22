@@ -31,6 +31,9 @@ export class TextsResource {
    *
    * @param phoneNumberId - UUID of the sending phone number.
    * @param options.to - E.164 destination number, or numbers for a group send.
+   *   Mutually exclusive with `conversationId`.
+   * @param options.conversationId - Existing conversation UUID to reply into.
+   *   The server resolves it to that conversation's participants.
    * @param options.text - Message body.
    * @param options.mediaUrls - MMS media URLs.
    *
@@ -41,11 +44,25 @@ export class TextsResource {
    */
   async send(
     phoneNumberId: string,
-    options: { to: string | string[]; text?: string | null; mediaUrls?: string[] | null },
+    options: {
+      to?: string | string[] | null;
+      conversationId?: string | null;
+      text?: string | null;
+      mediaUrls?: string[] | null;
+    },
   ): Promise<TextMessage> {
-    const body: { to: string | string[]; text?: string; media_urls?: string[] } = {
-      to: options.to,
-    };
+    const body: {
+      to?: string | string[];
+      conversation_id?: string;
+      text?: string;
+      media_urls?: string[];
+    } = {};
+    if (options.to != null) {
+      body.to = options.to;
+    }
+    if (options.conversationId != null) {
+      body.conversation_id = options.conversationId;
+    }
     if (options.text != null) {
       body.text = options.text;
     }

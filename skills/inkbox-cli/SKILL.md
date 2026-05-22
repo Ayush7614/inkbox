@@ -204,7 +204,7 @@ All text commands are identity-scoped and require `-i <handle>`.
 **Outbound SMS limits and gates (current):**
 
 - Allowed only from **local** numbers, not toll-free.
-- **15 sends per phone number per rolling 24h.**
+- **100 recipient sends per phone number per rolling 24h.** A 3-recipient group message counts as 3 recipient sends.
 - A freshly provisioned local number needs **~10-15 min** for 10DLC carrier propagation. Inspect with `inkbox number get <id>`; sending is gated until `smsStatus` reads `ready` (otherwise `409 sender_sms_pending`).
 - Recipient must have texted **`START`** to any number in the org. Unknown → `403 recipient_not_opted_in`. `STOP` → `403 recipient_opted_out`. Inspect / override consent state via `inkbox sms-opt-in` (see below).
 
@@ -213,6 +213,7 @@ All text commands are identity-scoped and require `-i <handle>`.
 ```bash
 inkbox text send -i <handle> --to +15551234567 --text "Hello from Inkbox"
 inkbox text send -i <handle> --to +15551234567,+15557654321 --text "Hello group" --media-url https://example.com/photo.jpg
+inkbox text send -i <handle> --conversation-id <conversation-uuid> --text "Reply all"
 inkbox text list -i <handle> --limit 20
 inkbox text get <text-id> -i <handle>
 inkbox text conversations -i <handle> --limit 20 --include-groups

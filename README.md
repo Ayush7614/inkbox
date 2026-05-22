@@ -149,7 +149,7 @@ Both SDKs also accept an in-process callable (Fetch handler in TS, ASGI app in P
 ### Outbound SMS — current limits
 
 - Outbound SMS works only from **local** numbers (not toll-free).
-- **15 sends per phone number per rolling 24h.**
+- **100 recipient sends per phone number per rolling 24h.** A 3-recipient group message counts as 3 recipient sends.
 - A new local number waits **~10-15 minutes** for the 10DLC campaign to propagate at the carrier; until then `phone_number.sms_status` (Python) / `phoneNumber.smsStatus` (TS) is `"pending"` and sends fail with `409 sender_sms_pending`.
 - Recipients must text **`START`** to any number in your organization to opt in. Unknown recipients fail with `403 recipient_not_opted_in`; opt-outs (`STOP`) return `403 recipient_opted_out`.
 

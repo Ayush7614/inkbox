@@ -24,7 +24,8 @@ class TextsResource:
         self,
         phone_number_id: UUID | str,
         *,
-        to: str | list[str],
+        to: str | list[str] | None = None,
+        conversation_id: UUID | str | None = None,
         text: str | None = None,
         media_urls: list[str] | None = None,
     ) -> TextMessage:
@@ -33,7 +34,10 @@ class TextsResource:
         Args:
             phone_number_id: UUID of the sending phone number.
             to: E.164 destination number, or a list of numbers for a
-                conversation-centric group send.
+                conversation-centric group send. Mutually exclusive with
+                ``conversation_id``.
+            conversation_id: Existing conversation UUID to reply into. The
+                server resolves it to that conversation's participants.
             text: Message body.
             media_urls: MMS media URLs. Pass with ``text`` or by themselves.
 
@@ -54,7 +58,11 @@ class TextsResource:
                 ``sender_sms_pending``, ``toll_free_verification_pending``,
                 ``sender_rate_limited``, ``carrier_rate_limit``).
         """
-        body: dict[str, Any] = {"to": to}
+        body: dict[str, Any] = {}
+        if to is not None:
+            body["to"] = to
+        if conversation_id is not None:
+            body["conversation_id"] = str(conversation_id)
         if text is not None:
             body["text"] = text
         if media_urls is not None:

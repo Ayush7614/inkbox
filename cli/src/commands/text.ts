@@ -24,7 +24,8 @@ export function registerTextCommands(program: Command): void {
     .command("send")
     .description("Send an outbound SMS/MMS from this identity's phone number")
     .requiredOption("-i, --identity <handle>", "Agent identity handle")
-    .requiredOption("--to <numbers>", "Comma-separated E.164 destination number(s)")
+    .option("--to <numbers>", "Comma-separated E.164 destination number(s)")
+    .option("--conversation-id <id>", "Existing conversation UUID to reply into")
     .option("--text <text>", "Message body")
     .option("--media-url <url>", "MMS media URL; repeat for multiple", collect, [])
     .action(
@@ -32,7 +33,8 @@ export function registerTextCommands(program: Command): void {
         this: Command,
         cmdOpts: {
           identity: string;
-          to: string;
+          to?: string;
+          conversationId?: string;
           text?: string;
           mediaUrl: string[];
         },
@@ -40,20 +42,41 @@ export function registerTextCommands(program: Command): void {
         const opts = getGlobalOpts(this);
         const inkbox = createClient(opts);
         const identity = await inkbox.getIdentity(cmdOpts.identity);
-        const recipients = parseList(cmdOpts.to);
-        if (recipients.length === 0) {
-          console.error("At least one --to recipient is required.");
+        const recipients = cmdOpts.to ? parseList(cmdOpts.to) : [];
+        if (recipients.length > 0 && cmdOpts.conversationId) {
+          console.error("Pass either --to or --conversation-id, not both.");
+          process.exit(1);
+        }
+        if (recipients.length === 0 && !cmdOpts.conversationId) {
+          console.error("Pass --to or --conversation-id.");
           process.exit(1);
         }
         if (!cmdOpts.text && cmdOpts.mediaUrl.length === 0) {
           console.error("Pass --text, --media-url, or both.");
           process.exit(1);
         }
-        const msg = await identity.sendText({
-          to: recipients.length === 1 ? recipients[0] : recipients,
-          text: cmdOpts.text,
-          mediaUrls: cmdOpts.mediaUrl.length > 0 ? cmdOpts.mediaUrl : undefined,
-        });
+        const sendOptions: {
+          to?: string | string[];
+          conversationId?: string;
+          text?: string;
+          mediaUrls?: string[];
+        } = {};
+        if (recipients.length > 0) {
+          sendOptions.to = recipients.length === 1 ? recipients[0] : recipients;
+        }
+        if (cmdOpts.conversationId) {
+          sendOptions.conversationId = cmdOpts.conversationId;
+        }
+        if (cmdOpts.text) {
+          sendOptions.text = cmdOpts.text;
+        }
+        if (cmdOpts.mediaUrl.length > 0) {
+          sendOptions.mediaUrls = cmdOpts.mediaUrl;
+        }
+
+        const msg = await identity.sendText(
+          sendOptions as unknown as Parameters<typeof identity.sendText>[0],
+        );
         output(
           {
             id: msg.id,
@@ -178,6 +201,7 @@ export function registerTextCommands(program: Command): void {
             "remotePhoneNumber",
             "participants",
             "isGroup",
+            "latestHasMedia",
             "latestText",
             "latestDirection",
             "unreadCount",

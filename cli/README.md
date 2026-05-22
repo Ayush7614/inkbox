@@ -181,7 +181,7 @@ Text message (SMS/MMS) operations, scoped to an identity. Requires `-i <handle>`
 **Outbound SMS rules:**
 
 - Allowed only from **local** numbers (not toll-free).
-- **15 sends per phone number per rolling 24h** — exceeded sends return `429 sender_rate_limited`.
+- **100 recipient sends per phone number per rolling 24h** — a 3-recipient group message counts as 3 recipient sends, and exceeded sends return `429 sender_rate_limited`.
 - A freshly provisioned local number needs **~10-15 minutes** for 10DLC carrier propagation. Check `inkbox number get <id>`: send is gated until `smsStatus` reaches `ready`.
 - Recipients must opt in by texting **`START`** to any number in your organization. Unknown recipients fail with `403 recipient_not_opted_in`; opt-outs (`STOP`) return `403 recipient_opted_out`.
 
@@ -190,6 +190,7 @@ Text message (SMS/MMS) operations, scoped to an identity. Requires `-i <handle>`
 ```bash
 inkbox text send -i <handle>                # Send an outbound SMS/MMS
   --to <e164[,e164...]>                     #   One recipient or a comma-separated group
+  --conversation-id <uuid>                  #   Reply into an existing conversation instead of --to
   --text <body>                             #   Message body
   --media-url <url>                         #   MMS media URL; repeat for multiple
 

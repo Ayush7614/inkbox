@@ -312,6 +312,12 @@ group = identity.send_text(
 )
 print(group.conversation_id, group.recipients)
 
+# Reply to an existing conversation by UUID. Do not pass "to" with this form.
+reply = identity.send_text(
+    conversation_id=group.conversation_id,
+    text="Following up in the same conversation.",
+)
+
 # List text messages
 texts = identity.list_texts(limit=20)
 for t in texts:
@@ -330,7 +336,7 @@ if text.media:    # MMS attachments (temporary signed URLs)
 # List one-to-one conversation summaries; opt into groups explicitly.
 convos = identity.list_text_conversations(limit=20, include_groups=True)
 for c in convos:
-    print(c.id, c.remote_phone_number, c.participants, c.latest_text)
+    print(c.id, c.participants, c.latest_has_media, c.latest_text)
 
 # Get messages in a specific conversation by remote number or conversation UUID.
 msgs = identity.get_text_conversation("+15551234567", limit=50)

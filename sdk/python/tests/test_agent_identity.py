@@ -134,6 +134,17 @@ class TestAgentIdentitySendText:
             PHONE_NUMBER_ID, to="+15551234567", text="Hello!",
         )
 
+    def test_send_text_can_reply_to_conversation(self):
+        identity, inkbox = _identity_with_mailbox()
+        inkbox._texts.send.return_value = MagicMock(spec=TextMessage)
+        conv_id = UUID("eeee1111-0000-0000-0000-0000000000fa")
+
+        identity.send_text(conversation_id=conv_id, text="Reply all")
+
+        inkbox._texts.send.assert_called_once_with(
+            PHONE_NUMBER_ID, conversation_id=conv_id, text="Reply all",
+        )
+
     def test_send_text_requires_phone(self):
         identity, _ = _identity_without_phone()
 

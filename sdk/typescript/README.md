@@ -332,6 +332,12 @@ const group = await identity.sendText({
 });
 console.log(group.conversationId, group.recipients);
 
+// Reply to an existing conversation by UUID. Do not pass `to` with this form.
+const reply = await identity.sendText({
+  conversationId: group.conversationId,
+  text: "Following up in the same conversation.",
+});
+
 // List text messages
 const texts = await identity.listTexts({ limit: 20 });
 for (const t of texts) {
@@ -353,7 +359,7 @@ if (text.media) {         // MMS attachments (temporary signed URLs)
 // List one-to-one conversation summaries; opt into groups explicitly.
 const convos = await identity.listTextConversations({ limit: 20, includeGroups: true });
 for (const c of convos) {
-  console.log(c.id, c.remotePhoneNumber, c.participants, c.latestText);
+  console.log(c.id, c.participants, c.latestHasMedia, c.latestText);
 }
 
 // Get messages in a specific conversation by remote number or conversation UUID.

@@ -73,6 +73,17 @@ class TestTextsSend:
         assert msg.recipients is not None
         assert len(msg.recipients) == 2
 
+    def test_posts_conversation_reply_payload(self, client, transport):
+        transport.post.return_value = TEXT_MESSAGE_GROUP_DICT
+        conv_id = "eeee1111-0000-0000-0000-0000000000fa"
+
+        client._texts.send(NUM_ID, conversation_id=conv_id, text="Reply all")
+
+        transport.post.assert_called_once_with(
+            f"/numbers/{NUM_ID}/texts",
+            json={"conversation_id": conv_id, "text": "Reply all"},
+        )
+
 
 class TestTextsList:
     def test_returns_texts(self, client, transport):
@@ -249,6 +260,7 @@ class TestTextsListConversations:
         assert convos[0].unread_count == 3
         assert convos[0].total_count == 15
         assert convos[0].latest_direction == "inbound"
+        assert convos[0].latest_has_media is False
         assert convos[0].id is not None
         assert convos[0].participants == [REMOTE]
         assert convos[0].is_group is False
@@ -264,6 +276,7 @@ class TestTextsListConversations:
         )
         assert convos[0].remote_phone_number is None
         assert convos[0].is_group is True
+        assert convos[0].latest_has_media is True
         assert convos[0].participants == ["+15551234567", "+15557654321"]
 
     def test_list_conversations_is_blocked_false(self, client, transport):

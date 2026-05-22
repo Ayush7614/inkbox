@@ -5,9 +5,11 @@
 ### Added
 
 - **Group text/MMS support.** `inkbox text send` accepts comma-separated
-  `--to` recipients and repeatable `--media-url`; `inkbox text
-  conversations` accepts `--include-groups`; conversation read commands
-  accept either the legacy remote number or a conversation UUID.
+  `--to` recipients, `--conversation-id` for replies into existing
+  conversations, and repeatable `--media-url`; `inkbox text
+  conversations` accepts `--include-groups` and displays
+  `latestHasMedia`; conversation read commands accept either the legacy
+  remote number or a conversation UUID.
 
 - **`inkbox identity access` command group** for managing agent visibility:
   - `inkbox identity access list <target-handle>` — list who can see an identity.

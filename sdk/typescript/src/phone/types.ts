@@ -244,6 +244,7 @@ export interface TextConversationSummary {
   latestText: string | null;
   latestDirection: string;
   latestType: string;
+  latestHasMedia: boolean;
   latestMessageAt: Date;
   unreadCount: number;
   totalCount: number;
@@ -386,6 +387,7 @@ export interface RawTextConversationSummary {
   latest_text: string | null;
   latest_direction: string;
   latest_type: string;
+  latest_has_media?: boolean | null;
   latest_message_at: string;
   unread_count: number;
   total_count: number;
@@ -573,6 +575,7 @@ export function parseTextConversationSummary(
     latestText: r.latest_text,
     latestDirection: r.latest_direction,
     latestType: r.latest_type,
+    latestHasMedia: r.latest_has_media ?? false,
     latestMessageAt: new Date(r.latest_message_at),
     unreadCount: r.unread_count,
     totalCount: r.total_count,

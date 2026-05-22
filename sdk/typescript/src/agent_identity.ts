@@ -473,6 +473,9 @@ export class AgentIdentity {
    * receiver-side shapes.
    *
    * @param options.to - E.164 destination number, or numbers for a group send.
+   *   Mutually exclusive with `conversationId`.
+   * @param options.conversationId - Existing conversation UUID to reply into.
+   *   The server resolves it to that conversation's participants.
    * @param options.text - Message body.
    * @param options.mediaUrls - MMS media URLs.
    *
@@ -482,7 +485,8 @@ export class AgentIdentity {
    * @throws {InkboxAPIError} for other send failures.
    */
   async sendText(options: {
-    to: string | string[];
+    to?: string | string[] | null;
+    conversationId?: string | null;
     text?: string | null;
     mediaUrls?: string[] | null;
   }): Promise<TextMessage> {

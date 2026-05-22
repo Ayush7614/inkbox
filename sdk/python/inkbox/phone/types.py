@@ -365,6 +365,7 @@ class TextConversationSummary:
     id: UUID | None = None
     participants: list[str] | None = None
     is_group: bool = False
+    latest_has_media: bool = False
 
     @classmethod
     def _from_dict(cls, d: dict[str, Any]) -> TextConversationSummary:
@@ -380,6 +381,7 @@ class TextConversationSummary:
             id=UUID(raw_id) if raw_id else None,
             participants=d.get("participants"),
             is_group=bool(d.get("is_group", False)),
+            latest_has_media=bool(d.get("latest_has_media", False)),
         )
 
 

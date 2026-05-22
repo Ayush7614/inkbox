@@ -567,7 +567,8 @@ class AgentIdentity:
     def send_text(
         self,
         *,
-        to: str | list[str],
+        to: str | list[str] | None = None,
+        conversation_id: UUID | str | None = None,
         text: str | None = None,
         media_urls: list[str] | None = None,
     ) -> TextMessage:
@@ -575,6 +576,9 @@ class AgentIdentity:
 
         Args:
             to: E.164 destination number, or a list of numbers for a group send.
+                Mutually exclusive with ``conversation_id``.
+            conversation_id: Existing conversation UUID to reply into. The
+                server resolves it to that conversation's participants.
             text: Message body.
             media_urls: MMS media URLs. Pass with ``text`` or by themselves.
 
@@ -593,7 +597,11 @@ class AgentIdentity:
             InkboxAPIError: for other send failures.
         """
         self._require_phone()
-        send_kwargs: dict[str, Any] = {"to": to}
+        send_kwargs: dict[str, Any] = {}
+        if to is not None:
+            send_kwargs["to"] = to
+        if conversation_id is not None:
+            send_kwargs["conversation_id"] = conversation_id
         if text is not None:
             send_kwargs["text"] = text
         if media_urls is not None:

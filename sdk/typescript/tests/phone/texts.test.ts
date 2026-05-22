@@ -84,6 +84,20 @@ describe("TextsResource.send", () => {
     expect(msg.remotePhoneNumber).toBeNull();
     expect(msg.recipients).toHaveLength(2);
   });
+
+  it("posts conversation reply payloads", async () => {
+    const http = mockHttp();
+    vi.mocked(http.post).mockResolvedValue(RAW_TEXT_MESSAGE_GROUP);
+    const res = new TextsResource(http);
+    const conversationId = "eeee1111-0000-0000-0000-0000000000fa";
+
+    await res.send(NUM_ID, { conversationId, text: "Reply all" });
+
+    expect(http.post).toHaveBeenCalledWith(
+      `/numbers/${NUM_ID}/texts`,
+      { conversation_id: conversationId, text: "Reply all" },
+    );
+  });
 });
 
 describe("TextsResource.list", () => {
@@ -278,6 +292,7 @@ describe("TextsResource.listConversations", () => {
     expect(convos[0].remotePhoneNumber).toBe(REMOTE);
     expect(convos[0].unreadCount).toBe(3);
     expect(convos[0].totalCount).toBe(15);
+    expect(convos[0].latestHasMedia).toBe(false);
     expect(convos[0].id).toBe("eeee1111-0000-0000-0000-000000000001");
     expect(convos[0].participants).toStrictEqual([REMOTE]);
     expect(convos[0].isGroup).toBe(false);
@@ -296,6 +311,7 @@ describe("TextsResource.listConversations", () => {
     );
     expect(convos[0].remotePhoneNumber).toBeNull();
     expect(convos[0].isGroup).toBe(true);
+    expect(convos[0].latestHasMedia).toBe(true);
     expect(convos[0].participants).toStrictEqual(["+15551234567", "+15557654321"]);
   });
 
