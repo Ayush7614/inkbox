@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — webhook subscriptions refactor
+## 0.4.6 — webhook subscriptions refactor
 
 ### Breaking
 
