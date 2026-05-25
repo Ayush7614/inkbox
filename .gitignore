@@ -19,7 +19,7 @@ coverage/
 *.js.map
 *.ts.map
 package-lock.json
-# Python testing and linting
+# Python testing asnd linting
 .pytest_cache/
 .ruff_cache/
 .coverage
@@ -44,6 +44,3 @@ uv.lock
 # OS
 .DS_Store
 Thumbs.db
-
-# One-off planning docs that must never land in git history.
-update-for-webhook-subs.md
