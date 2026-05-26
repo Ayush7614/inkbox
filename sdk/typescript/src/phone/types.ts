@@ -54,6 +54,21 @@ export enum TextMessageOrigin {
   AUTO_REPLY = "auto_reply",
 }
 
+/**
+ * A phone number owned by your organization.
+ *
+ * **Webhook setup** splits across two surfaces:
+ * - **Text events** (`text.received`, `text.sent`, `text.delivered`,
+ *   `text.delivery_failed`, `text.delivery_unconfirmed`) — managed via
+ *   `inkbox.webhooks.subscriptions.create({ phoneNumberId, url, eventTypes })`.
+ *   Up to 20 active subscriptions per number.
+ * - **Incoming-call event** (`phone.incoming_call`) — managed via the
+ *   `incomingCallWebhookUrl` field on this resource (synchronous control
+ *   plane: the response body decides answer/reject/ignore, so it can't
+ *   fan out).
+ *
+ * @see {@link WebhookSubscriptionsResource} on `inkbox.webhooks.subscriptions` for text events
+ */
 export interface PhoneNumber {
   id: string;
   number: string;

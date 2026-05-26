@@ -115,6 +115,16 @@ export interface FilterModeChangeNotice {
   redundantRuleCount: number;
 }
 
+/**
+ * An Inkbox mailbox (an email address owned by your organization).
+ *
+ * To deliver `message.*` events to an HTTPS endpoint, create a row on
+ * the channel-agnostic subscription resource at
+ * `inkbox.webhooks.subscriptions.create({ mailboxId, url, eventTypes })`.
+ * Up to 20 active subscriptions per mailbox.
+ *
+ * @see {@link WebhookSubscriptionsResource} on `inkbox.webhooks.subscriptions`
+ */
 export interface Mailbox {
   id: string;
   emailAddress: string;

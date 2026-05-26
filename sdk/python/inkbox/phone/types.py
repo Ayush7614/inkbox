@@ -73,6 +73,22 @@ class PhoneNumber:
     numbers are always bound to an identity. Always populated on
     every phone-number response.
 
+    **Webhooks** split across two surfaces:
+
+    - **Text events** (``text.received``, ``text.sent``,
+      ``text.delivered``, ``text.delivery_failed``,
+      ``text.delivery_unconfirmed``) are managed via
+      ``inkbox.webhooks.subscriptions.create(phone_number_id=..., url=..., event_types=[...])``.
+      Up to 20 active subscriptions per number.
+    - **Incoming-call event** (``phone.incoming_call``) is managed via
+      the ``incoming_call_webhook_url`` field on this resource
+      (synchronous control plane: the response body decides
+      answer/reject/ignore, so it can't fan out).
+
+    See Also:
+        :class:`inkbox.WebhookSubscriptionsResource` on
+        ``inkbox.webhooks.subscriptions`` for text events.
+
     SMS-readiness fields (``sms_status``, ``sms_error_code``,
     ``sms_error_detail``, ``sms_ready_at``) reflect 10DLC / TFV
     provisioning progress. A new local number starts at
