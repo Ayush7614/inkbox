@@ -460,3 +460,39 @@ describe("IMessageContactRulesResource", () => {
     expect(parsed.searchParams.get("agent_identity_id")).toBe(IDENTITY_ID);
   });
 });
+
+describe("identity iMessage fields", () => {
+  it("parses imessage_enabled and filter mode on summaries", async () => {
+    const { parseAgentIdentitySummary } = await import("../src/identities/types.js");
+    const summary = parseAgentIdentitySummary({
+      id: IDENTITY_ID,
+      organization_id: "org_x",
+      agent_handle: HANDLE,
+      display_name: null,
+      description: null,
+      email_address: null,
+      imessage_enabled: true,
+      imessage_filter_mode: "whitelist",
+      created_at: "2026-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    });
+    expect(summary.imessageEnabled).toBe(true);
+    expect(summary.imessageFilterMode).toBe("whitelist");
+  });
+
+  it("defaults the fields when absent from the wire", async () => {
+    const { parseAgentIdentitySummary } = await import("../src/identities/types.js");
+    const summary = parseAgentIdentitySummary({
+      id: IDENTITY_ID,
+      organization_id: "org_x",
+      agent_handle: HANDLE,
+      display_name: null,
+      description: null,
+      email_address: null,
+      created_at: "2026-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    });
+    expect(summary.imessageEnabled).toBe(false);
+    expect(summary.imessageFilterMode).toBe("blacklist");
+  });
+});
