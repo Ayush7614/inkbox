@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.7 — graceful tunnel reconnect on redeploy
+## 0.4.8 — graceful tunnel reconnect on redeploy
 
 ### Added
 
