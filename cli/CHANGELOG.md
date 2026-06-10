@@ -4,7 +4,7 @@
 
 ### Changed
 
-- Bundles `@inkbox/sdk` `0.4.8`, which adds make-before-break tunnel reconnect: a long-running `inkbox tunnel` survives a server redeploy by standing up a fresh connection before closing the draining one, so short HTTP requests see no gap and live WebSocket sessions close cleanly (typed `server_draining`) and reconnect. In-progress WS/TCP sessions still end on redeploy — the peer reconnects onto the new task.
+- Bundles `@inkbox/sdk` `0.4.8`, which adds make-before-break tunnel reconnect on server redeploy. No CLI-visible behavior change — the CLI's tunnel commands (`list`, `get`, `update`, `sign-csr`) are one-shot control-plane calls; the reconnect logic lives in the SDK's long-running `tunnels.connect(...)` data plane, which the CLI does not use.
 
 ## 0.4.6 — webhook subscriptions refactor
 

@@ -12,7 +12,7 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 - **Typed `server_draining` WebSocket close** (close code `4500`) when the draining connection drops a live WebSocket bridge, so handlers can reconnect promptly instead of seeing a generic reset:
   - TypeScript: the inbound stream throws `WsServerDraining` (a `WsClosed` subclass, `reconnectAdvised = true`). New exports from `@inkbox/sdk/tunnels/connect`: `WsServerDraining`, `SERVER_DRAINING_WS_CLOSE_CODE`.
   - Python: the ASGI handler receives a `websocket.disconnect` carrying close code `4500`.
-- CLI: `inkbox tunnel` bundles the new SDK, so a long-running tunnel survives a server redeploy with no gap for short HTTP requests.
+- CLI: bundles `@inkbox/sdk` `0.4.8`; no CLI-visible behavior change — the CLI's tunnel commands are one-shot control-plane calls.
 
 ### Notes / limits
 
