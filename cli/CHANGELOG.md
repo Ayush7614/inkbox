@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.8 — graceful tunnel reconnect on redeploy
+
+### Changed
+
+- Bundles `@inkbox/sdk` `0.4.8`, which adds make-before-break tunnel reconnect on server redeploy. No CLI-visible behavior change — the CLI's tunnel commands (`list`, `get`, `update`, `sign-csr`) are one-shot control-plane calls; the reconnect logic lives in the SDK's long-running `tunnels.connect(...)` data plane, which the CLI does not use.
+
 ## 0.4.6 — webhook subscriptions refactor
 
 ### Breaking

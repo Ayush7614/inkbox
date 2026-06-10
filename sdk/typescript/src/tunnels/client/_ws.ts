@@ -52,6 +52,23 @@ export class WsClosed extends Error {
   }
 }
 
+/** Application close code surfaced when the server is draining for a redeploy. */
+export const SERVER_DRAINING_WS_CLOSE_CODE = 4500;
+
+/**
+ * Thrown from the inbound iterator when the connection is being drained for
+ * a server redeploy. The session cannot migrate; reconnect is advised. The
+ * third-party peer's fresh connection lands cleanly on the new task.
+ */
+export class WsServerDraining extends WsClosed {
+  readonly code = SERVER_DRAINING_WS_CLOSE_CODE;
+  readonly reconnectAdvised = true;
+  constructor(message = "server draining; reconnect advised") {
+    super(message);
+    this.name = "WsServerDraining";
+  }
+}
+
 // --- Public InkboxWebSocket interface ------------------------------------
 
 export interface InkboxWebSocketAcceptOpts {
@@ -358,7 +375,16 @@ class WsSession implements InkboxWebSocket {
         if (this.acceptResolved && !this.closeRequested) {
           await this.close(1000, "");
         } else if (!this.acceptResolved && !this.closeRequested) {
-          await this.bridge.rejectUpgrade(500, "handler returned without accept");
+          // Mark terminal FIRST so pumpStarter's wait loop exits even if
+          // rejectUpgrade throws (e.g. the origin conn is draining and
+          // refuses the reply stream) — otherwise run()'s finally would
+          // await pumpStarter forever.
+          this.closeRequested = true;
+          try {
+            await this.bridge.rejectUpgrade(500, "handler returned without accept");
+          } catch {
+            /* swallow — origin may already be torn down */
+          }
           this.closeResolved = true;
         }
       }

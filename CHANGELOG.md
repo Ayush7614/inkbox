@@ -4,6 +4,20 @@ All notable changes to the Inkbox SDK, CLI, and skills live here.
 Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 (Python), and `@inkbox/cli`.
 
+## 0.4.8 — graceful tunnel reconnect on redeploy
+
+### Added
+
+- **Make-before-break tunnel reconnect** in both SDKs. When the tunnel server signals a graceful drain (a NO_ERROR `GOAWAY`) during a redeploy, the client opens a new persistent connection and parks a fresh intake pool **before** closing the draining one, instead of tearing down and reconnecting cold. In-flight HTTP webhook replies are posted on the new connection so they round-trip across the handoff. The handoff is in-band — it does not surface as a `reconnecting` status or wait out the backoff schedule.
+- **Typed `server_draining` WebSocket close** (close code `4500`) when the draining connection drops a live WebSocket bridge, so handlers can reconnect promptly instead of seeing a generic reset:
+  - TypeScript: the inbound stream throws `WsServerDraining` (a `WsClosed` subclass, `reconnectAdvised = true`). New exports from `@inkbox/sdk/tunnels/connect`: `WsServerDraining`, `SERVER_DRAINING_WS_CLOSE_CODE`.
+  - Python: the ASGI handler receives a `websocket.disconnect` carrying close code `4500`.
+- CLI: bundles `@inkbox/sdk` `0.4.8`; no CLI-visible behavior change — the CLI's tunnel commands are one-shot control-plane calls.
+
+### Notes / limits
+
+- In-progress WebSocket and passthrough-TCP sessions **cannot** migrate across a redeploy — the third-party socket lives on the dying task. The client surfaces a clean typed close and reconnects fast; the third-party peer reconnects onto the new task. Idempotent reconnect is the right client pattern.
+
 ## 0.4.7 — iMessage
 
 ### Added
