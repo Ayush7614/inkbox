@@ -264,6 +264,34 @@ Tunnels are provisioned atomically by `inkbox.createIdentity(...)`; there is no 
 
 ---
 
+## Server Redeploys
+
+Redeploys of the tunnel service are graceful (SDK ≥ 0.4.8). When the server signals a drain, a long-running listener reconnects **make-before-break**: it stands up a fresh connection and parks a new intake pool before closing the draining one, so short HTTP requests see no gap and in-flight HTTP replies round-trip across the handoff. The handoff is in-band — `on_status` does **not** fire `"reconnecting"` (that status still means an unplanned drop / cold reconnect).
+
+In-progress WebSocket and passthrough-TCP sessions **cannot** migrate — the third-party socket lives on the dying task. They end with a typed `server_draining` close (WS close code `4500`) and the peer reconnects onto the new task. Write handlers to reconnect idempotently.
+
+TypeScript — the inbound iterator throws `WsServerDraining` (a `WsClosed` subclass with `reconnectAdvised = true`):
+
+```typescript
+import { WsServerDraining } from "@inkbox/sdk/tunnels/connect";
+
+const wsHandler: InkboxWsHandler = async (ws) => {
+  await ws.accept();
+  try {
+    for await (const msg of ws) {
+      await ws.send(msg);
+    }
+  } catch (err) {
+    if (err instanceof WsServerDraining) return;  // peer reconnects onto the new task
+    throw err;
+  }
+};
+```
+
+(`SERVER_DRAINING_WS_CLOSE_CODE` is also exported.)
+
+Python — the ASGI app receives a normal `websocket.disconnect` event with `code == 4500` instead of a generic reset; clean up and let the peer reconnect.
+
 ## Operational Notes
 
 - **State dir is sensitive in passthrough mode.** It stores the per-tunnel private key. Default is `0700` under the user's home directory; treat it like an SSH key dir. Edge mode keeps only zone/public-host caching there.
