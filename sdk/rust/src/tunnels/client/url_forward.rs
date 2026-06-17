@@ -7,6 +7,9 @@
 //!
 //! Ported from `inkbox/tunnels/client/_url_forward.py`.
 
+use super::envelope::Envelope;
+use super::protocol::is_hop_by_hop_request;
+
 /// `forward_to` points outside the allowlist and `allow_remote_forwarding`
 /// is false (or the scheme/host is invalid).
 #[derive(Debug)]
@@ -258,6 +261,196 @@ pub fn join_forward_path(forward_to: &str, envelope_path: &str) -> String {
     out
 }
 
+/// Build the headers we send to `forward_to`.
+///
+/// Hop-by-hop headers and inbound `X-Forwarded-For` / `Forwarded` headers are
+/// stripped here (defense in depth — the server side also strips inbound
+/// forwarded-for headers from third-party traffic so only this SDK's view of
+/// the source IP reaches your app). The SDK then injects `Host`,
+/// `X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Forwarded-For`, `Forwarded` so
+/// the user's app sees a consistent forwarded-headers view.
+///
+/// Mirrors Python `build_forward_headers`.
+///
+/// # Arguments
+/// * `envelope` - The inbound envelope whose forwarded headers we relay.
+/// * `public_host` - The tunnel's public hostname, injected as `X-Forwarded-Host`.
+/// * `target_host` - The upstream authority (`netloc`), injected as `Host`.
+///
+/// # Returns
+/// The ordered `(name, value)` header pairs to send upstream.
+pub fn build_forward_headers(
+    envelope: &Envelope,
+    public_host: &str,
+    target_host: &str,
+) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = Vec::new();
+    // Rewrite Host to the upstream authority and inject the forwarding view.
+    out.push(("Host".to_string(), target_host.to_string()));
+    out.push(("X-Forwarded-Host".to_string(), public_host.to_string()));
+    out.push(("X-Forwarded-Proto".to_string(), "https".to_string()));
+    if let Some(ip) = &envelope.forwarded_for_ip {
+        if !ip.is_empty() {
+            out.push(("X-Forwarded-For".to_string(), ip.clone()));
+            out.push(("Forwarded".to_string(), format!("for={ip}")));
+        }
+    }
+    // Headers we've already set (lowercased) — skip any inbound dupes.
+    const SEEN_SPECIAL: &[&str] = &[
+        "host",
+        "x-forwarded-host",
+        "x-forwarded-proto",
+        "x-forwarded-for",
+        "forwarded",
+    ];
+    for (k, v) in &envelope.forwarded_headers {
+        let kl = k.to_ascii_lowercase();
+        // Strip hop-by-hop request headers and our injected specials.
+        if is_hop_by_hop_request(&kl) {
+            continue;
+        }
+        if SEEN_SPECIAL.contains(&kl.as_str()) {
+            continue;
+        }
+        out.push((k.clone(), v.clone()));
+    }
+    out
+}
+
+/// Result of forwarding one envelope to the local upstream URL.
+pub struct ForwardResult {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+    /// Optional `inkbox-reason` to attach to the reply (e.g. on a 502).
+    pub inkbox_reason: Option<String>,
+}
+
+/// Forward `envelope` to the local `forward_to` base URL and return the
+/// upstream response. Mirrors Python `forward_envelope_to_url`.
+///
+/// The caller is expected to have already:
+///   - Validated `forward_to` via [`validate_forward_target`].
+///   - Validated the envelope's path via [`validate_envelope_path`].
+///   - Materialized the inbound body (resolved any `inkbox-body-uri`).
+///
+/// # Arguments
+/// * `envelope` - The inbound request to forward.
+/// * `forward_to` - The local upstream base URL (e.g. `http://localhost:8080`).
+/// * `public_host` - The tunnel's public hostname for `X-Forwarded-Host`.
+/// * `client` - The shared async `reqwest::Client` used for the upstream call.
+/// * `max_outbound_body_bytes` - Cap on the buffered upstream response body.
+///
+/// # Returns
+/// A [`ForwardResult`] carrying the upstream status/headers/body, or a `502`
+/// with an `inkbox_reason` on transport error or oversized response.
+pub async fn forward_envelope_to_url(
+    envelope: &Envelope,
+    forward_to: &str,
+    public_host: &str,
+    client: &reqwest::Client,
+    max_outbound_body_bytes: usize,
+) -> ForwardResult {
+    let parsed = url_split(forward_to);
+    // Host header = the upstream authority (includes any :port), per Python.
+    let target_host = parsed.netloc.clone();
+    let target_url = join_forward_path(forward_to, &envelope.path);
+    let headers = build_forward_headers(envelope, public_host, &target_host);
+
+    // Parse the method; an unknown verb is a non-recoverable client-side
+    // problem, so surface it as an upstream-error 502 rather than panicking.
+    let method = match reqwest::Method::from_bytes(envelope.method.as_bytes()) {
+        Ok(m) => m,
+        Err(_) => return upstream_error(),
+    };
+
+    // Translate the (name, value) pairs into a reqwest HeaderMap, skipping any
+    // header that won't form a valid HTTP header (defense in depth).
+    let mut header_map = reqwest::header::HeaderMap::new();
+    for (k, v) in &headers {
+        let name = match reqwest::header::HeaderName::from_bytes(k.as_bytes()) {
+            Ok(n) => n,
+            Err(_) => continue,
+        };
+        let value = match reqwest::header::HeaderValue::from_str(v) {
+            Ok(val) => val,
+            Err(_) => continue,
+        };
+        header_map.append(name, value);
+    }
+
+    // Fire the request; a transport/connection error maps to upstream-error.
+    let resp = match client
+        .request(method, &target_url)
+        .headers(header_map)
+        .body(envelope.body.clone())
+        .send()
+        .await
+    {
+        Ok(r) => r,
+        Err(_) => return upstream_error(),
+    };
+
+    let status = resp.status().as_u16();
+    // Response header names are yielded lowercased, matching Python.
+    let resp_headers: Vec<(String, String)> = resp
+        .headers()
+        .iter()
+        .map(|(k, v)| {
+            (
+                k.as_str().to_ascii_lowercase(),
+                String::from_utf8_lossy(v.as_bytes()).into_owned(),
+            )
+        })
+        .collect();
+
+    // Stream the body so we can bail early once the cap is exceeded without
+    // buffering an oversized response into memory first.
+    let mut buf: Vec<u8> = Vec::new();
+    let mut resp = resp;
+    loop {
+        match resp.chunk().await {
+            Ok(Some(chunk)) => {
+                if buf.len() + chunk.len() > max_outbound_body_bytes {
+                    return response_too_large();
+                }
+                buf.extend_from_slice(&chunk);
+            }
+            Ok(None) => break,
+            Err(_) => return upstream_error(),
+        }
+    }
+
+    ForwardResult {
+        status,
+        headers: resp_headers,
+        body: buf,
+        inkbox_reason: None,
+    }
+}
+
+/// The fixed 502 shape returned on a transport/connection/stream error,
+/// matching Python's `upstream-error` reason.
+fn upstream_error() -> ForwardResult {
+    ForwardResult {
+        status: 502,
+        headers: vec![("content-type".to_string(), "text/plain".to_string())],
+        body: b"upstream error".to_vec(),
+        inkbox_reason: Some("upstream-error".to_string()),
+    }
+}
+
+/// The fixed 502 shape returned when the upstream body exceeds the cap,
+/// matching Python's `response-too-large` reason.
+fn response_too_large() -> ForwardResult {
+    ForwardResult {
+        status: 502,
+        headers: vec![("content-type".to_string(), "text/plain".to_string())],
+        body: b"response too large".to_vec(),
+        inkbox_reason: Some("response-too-large".to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,5 +552,121 @@ mod tests {
             join_forward_path("http://localhost:8080/base/", "/webhook"),
             "http://localhost:8080/base/webhook"
         );
+    }
+
+    // --- build_forward_headers (mirrors the Python header-injection) -----
+
+    fn envelope_with(
+        forwarded_headers: &[(&str, &str)],
+        forwarded_for_ip: Option<&str>,
+    ) -> Envelope {
+        Envelope {
+            request_id: "req-1".to_string(),
+            method: "POST".to_string(),
+            path: "/webhook".to_string(),
+            route_kind: "webhook".to_string(),
+            ws_id: None,
+            forwarded_headers: forwarded_headers
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.to_string()))
+                .collect(),
+            body: Vec::new(),
+            body_uri: None,
+            forwarded_for_ip: forwarded_for_ip.map(str::to_string),
+            tcp_id: None,
+            sni_host: None,
+            extra_meta: std::collections::BTreeMap::new(),
+        }
+    }
+
+    #[test]
+    fn forward_headers_inject_host_and_forwarding() {
+        let env = envelope_with(&[("content-type", "application/json")], Some("1.2.3.4"));
+        let out = build_forward_headers(&env, "tun.example.com", "localhost:8080");
+        assert_eq!(
+            out,
+            vec![
+                ("Host".to_string(), "localhost:8080".to_string()),
+                ("X-Forwarded-Host".to_string(), "tun.example.com".to_string()),
+                ("X-Forwarded-Proto".to_string(), "https".to_string()),
+                ("X-Forwarded-For".to_string(), "1.2.3.4".to_string()),
+                ("Forwarded".to_string(), "for=1.2.3.4".to_string()),
+                ("content-type".to_string(), "application/json".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn forward_headers_omit_forwarded_for_when_absent() {
+        let env = envelope_with(&[("accept", "*/*")], None);
+        let out = build_forward_headers(&env, "tun.example.com", "127.0.0.1:9000");
+        assert_eq!(
+            out,
+            vec![
+                ("Host".to_string(), "127.0.0.1:9000".to_string()),
+                ("X-Forwarded-Host".to_string(), "tun.example.com".to_string()),
+                ("X-Forwarded-Proto".to_string(), "https".to_string()),
+                ("accept".to_string(), "*/*".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn forward_headers_strip_hop_by_hop() {
+        // `host`, `connection`, `transfer-encoding`, `upgrade` are hop-by-hop.
+        let env = envelope_with(
+            &[
+                ("Connection", "keep-alive"),
+                ("Transfer-Encoding", "chunked"),
+                ("Upgrade", "websocket"),
+                ("Host", "evil.example"),
+                ("X-Real-Custom", "kept"),
+            ],
+            None,
+        );
+        let out = build_forward_headers(&env, "tun.example.com", "localhost:8080");
+        assert_eq!(
+            out,
+            vec![
+                ("Host".to_string(), "localhost:8080".to_string()),
+                ("X-Forwarded-Host".to_string(), "tun.example.com".to_string()),
+                ("X-Forwarded-Proto".to_string(), "https".to_string()),
+                ("X-Real-Custom".to_string(), "kept".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn forward_headers_drop_inbound_forwarding_dupes() {
+        // Inbound x-forwarded-* / forwarded are dropped in favor of ours.
+        let env = envelope_with(
+            &[
+                ("X-Forwarded-For", "9.9.9.9"),
+                ("X-Forwarded-Host", "spoof.example"),
+                ("X-Forwarded-Proto", "http"),
+                ("Forwarded", "for=9.9.9.9"),
+                ("X-Trace", "abc"),
+            ],
+            Some("1.2.3.4"),
+        );
+        let out = build_forward_headers(&env, "tun.example.com", "localhost:8080");
+        assert_eq!(
+            out,
+            vec![
+                ("Host".to_string(), "localhost:8080".to_string()),
+                ("X-Forwarded-Host".to_string(), "tun.example.com".to_string()),
+                ("X-Forwarded-Proto".to_string(), "https".to_string()),
+                ("X-Forwarded-For".to_string(), "1.2.3.4".to_string()),
+                ("Forwarded".to_string(), "for=1.2.3.4".to_string()),
+                ("X-Trace".to_string(), "abc".to_string()),
+            ]
+        );
+    }
+
+    #[test]
+    fn target_host_is_netloc_with_port() {
+        // The Host header uses the full netloc (authority) including the port.
+        assert_eq!(url_split("http://localhost:8080/base").netloc, "localhost:8080");
+        assert_eq!(url_split("http://127.0.0.1:9000").netloc, "127.0.0.1:9000");
     }
 }

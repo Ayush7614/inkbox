@@ -242,11 +242,11 @@ impl TunnelsResource {
             api_key,
             ForwardTo::Url(forward_to.to_string()),
         );
-        let runtime = TunnelRuntime::new(cfg);
+        let runtime = std::sync::Arc::new(TunnelRuntime::new(cfg));
 
         // The runtime is async; the resource surface is sync (mirrors the
         // Python `TunnelListener` running the runtime on its own loop). Build
-        // a current-thread tokio runtime and drive `serve_forever` to
+        // a multi-thread tokio runtime and drive `serve_forever` to
         // completion.
         let rt = tokio::runtime::Builder::new_multi_thread()
             .enable_all()

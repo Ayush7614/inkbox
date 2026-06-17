@@ -24,7 +24,13 @@ default = []
 # The tunnels reverse-proxy runtime (local TLS-terminating HTTP/2 + WebSocket
 # data plane). Off by default because it pulls in tokio/rustls/h2; the REST
 # tunnels surface (list/get/update/sign_csr) is always available.
-tunnels-runtime = ["dep:tokio", "dep:rustls", "dep:rustls-pemfile", "dep:h2", "dep:http", "dep:bytes"]
+tunnels-runtime = [
+    "dep:tokio", "dep:rustls", "dep:rustls-pemfile", "dep:h2", "dep:http", "dep:bytes",
+    "dep:tokio-rustls", "dep:webpki-roots", "dep:p256", "dep:x509-cert", "dep:der", "dep:spki",
+    # `sha2/oid` exposes the SHA-256 AssociatedOid impl that x509-cert's ECDSA
+    # DynSignatureAlgorithmIdentifier needs to emit `ecdsa-with-SHA256` in CSRs.
+    "sha2/oid",
+]
 
 [dependencies]
 # HTTP — blocking client mirrors the synchronous Python SDK surface.
@@ -63,4 +69,12 @@ rustls-pemfile = { version = "2", optional = true }
 h2 = { version = "0.4", optional = true }
 http = { version = "1", optional = true }
 bytes = { version = "1", optional = true }
+tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"], optional = true }
+webpki-roots = { version = "0.26", optional = true }
+# Passthrough cert/CSR (PKCS#10) — matches the Python SDK's EC P-256 keys.
+# All pure-Rust (RustCrypto), no C/OpenSSL dependency.
+p256 = { version = "0.13", features = ["ecdsa", "pem", "pkcs8"], optional = true }
+x509-cert = { version = "0.2", features = ["pem", "builder"], optional = true }
+der = { version = "0.7", optional = true }
+spki = { version = "0.7", optional = true }
 
