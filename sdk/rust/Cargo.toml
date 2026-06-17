@@ -1,0 +1,63 @@
+# sdk/rust/Cargo.toml
+#
+# inkbox — Rust SDK for the Inkbox APIs.
+#
+# Mirrors the Python (`inkbox` on PyPI) and TypeScript (`@inkbox/sdk` on npm)
+# SDKs feature-for-feature: mail, phone, iMessage, contacts, notes,
+# identities, vault, API keys, webhooks, agent signup, whoami, and tunnels.
+
+[package]
+name = "inkbox"
+version = "0.4.8"
+edition = "2021"
+rust-version = "1.74"
+description = "Rust SDK for the Inkbox API"
+readme = "README.md"
+license = "MIT"
+homepage = "https://inkbox.ai"
+repository = "https://github.com/inkbox-ai/inkbox/tree/main/sdk/rust"
+keywords = ["inkbox", "email", "sms", "agents", "api"]
+categories = ["api-bindings"]
+
+[features]
+default = []
+# The tunnels reverse-proxy runtime (local TLS-terminating HTTP/2 + WebSocket
+# data plane). Off by default because it pulls in tokio/rustls/h2; the REST
+# tunnels surface (list/get/update/sign_csr) is always available.
+tunnels-runtime = ["dep:tokio", "dep:rustls", "dep:rustls-pemfile", "dep:h2", "dep:http", "dep:bytes"]
+
+[dependencies]
+# HTTP — blocking client mirrors the synchronous Python SDK surface.
+reqwest = { version = "0.12", default-features = false, features = ["blocking", "json", "rustls-tls", "multipart"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+uuid = { version = "1", features = ["v4", "serde"] }
+url = "2"
+
+# Vault crypto (Argon2id KDF + AES-256-GCM envelope encryption, matching
+# inkbox/vault/crypto.py) and webhook HMAC verification.
+argon2 = "0.5"
+aes-gcm = "0.10"
+hmac = "0.12"
+sha1 = "0.10"
+sha2 = "0.10"
+hkdf = "0.12"
+base64 = "0.22"
+base32 = "0.5"
+hex = "0.4"
+rand = "0.8"
+subtle = "2"
+zeroize = "1"
+ed25519-dalek = { version = "2", features = ["pkcs8", "pem", "rand_core"] }
+
+# Tunnels runtime (optional)
+tokio = { version = "1", features = ["full"], optional = true }
+rustls = { version = "0.23", optional = true }
+rustls-pemfile = { version = "2", optional = true }
+h2 = { version = "0.4", optional = true }
+http = { version = "1", optional = true }
+bytes = { version = "1", optional = true }
+
+[dev-dependencies]
+httpmock = "0.7"
