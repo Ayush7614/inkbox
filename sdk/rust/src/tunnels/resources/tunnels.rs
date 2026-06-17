@@ -133,20 +133,21 @@ impl TunnelsResource {
     /// Sign a CSR for a passthrough tunnel.
     ///
     /// The server performs DNS validation and cert issuance synchronously
-    /// inside this request, which can take up to a few minutes. Python uses an
-    /// elevated 180-second timeout for this; the Rust transport does not yet
-    /// expose a per-call timeout override (see [`SIGN_CSR_TIMEOUT_SECONDS`]),
-    /// so this call relies on the transport's configured timeout.
+    /// inside this request, which can take up to a few minutes, so this call
+    /// uses the elevated [`SIGN_CSR_TIMEOUT_SECONDS`] (180s) timeout, matching
+    /// the Python SDK.
     ///
     /// # Arguments
     /// * `tunnel_id` - The tunnel's id.
     /// * `csr_pem` - PEM-encoded CSR. The CN must equal the tunnel hostname.
     pub fn sign_csr(&self, tunnel_id: &str, csr_pem: &str) -> Result<SignedCert> {
         let body = json!({ "csr_pem": csr_pem });
-        match self
-            .http
-            .post(&format!("{BASE}/{tunnel_id}/sign-csr"), Some(&body), NO_QUERY)
-        {
+        match self.http.post_with_timeout(
+            &format!("{BASE}/{tunnel_id}/sign-csr"),
+            Some(&body),
+            NO_QUERY,
+            SIGN_CSR_TIMEOUT_SECONDS,
+        ) {
             // Reclassify a 409 onto the right tunnel subclass (edge/TLS-mode
             // vs CSR-state), matching Python's `_map_sign_csr_error`.
             Err(err) => Err(map_sign_csr_error(err)),

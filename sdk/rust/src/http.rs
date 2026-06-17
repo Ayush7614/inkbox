@@ -80,6 +80,28 @@ impl HttpTransport {
         resp.json_or_null()
     }
 
+    /// `POST` with a per-request timeout override (the Python SDK's `timeout=`
+    /// kwarg). Used by long-running control-plane calls like tunnel CSR
+    /// signing, which the server performs synchronously and can take minutes.
+    pub fn post_with_timeout<B: Serialize>(
+        &self,
+        path: &str,
+        body: Option<&B>,
+        params: Query,
+        timeout_secs: f64,
+    ) -> Result<Value> {
+        let mut rb = self
+            .client
+            .post(self.url(path))
+            .query(params)
+            .timeout(Duration::from_secs_f64(timeout_secs));
+        if let Some(b) = body {
+            rb = rb.json(b);
+        }
+        let resp = raise_for_status(self.send(rb, &self.url(path))?)?;
+        resp.json_or_null()
+    }
+
     pub fn put<B: Serialize>(&self, path: &str, body: &B) -> Result<Value> {
         let rb = self.client.put(self.url(path)).json(body);
         raise_for_status(self.send(rb, &self.url(path))?)?.json_value()
