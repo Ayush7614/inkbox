@@ -3,8 +3,8 @@
 Rust SDK for the [Inkbox](https://inkbox.ai) API — email, SMS/MMS, iMessage,
 voice, contacts, notes, an encrypted vault, and inbound tunnels for AI agents.
 
-This crate is a faithful port of the [Python](../python) (`inkbox` on PyPI) and
-[TypeScript](../typescript) (`@inkbox/sdk` on npm) SDKs. The public surface is
+This crate is a faithful port of the [Python](https://github.com/inkbox-ai/inkbox/tree/main/sdk/python) (`inkbox` on PyPI) and
+[TypeScript](https://github.com/inkbox-ai/inkbox/tree/main/sdk/typescript) (`@inkbox/sdk` on npm) SDKs. The public surface is
 **blocking** (built on `reqwest::blocking`), matching the synchronous Python/TS
 APIs. JSON field names, enum values, request bodies, query params, and paths
 match the other SDKs exactly — they all speak to the same server.

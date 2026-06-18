@@ -19,6 +19,11 @@ repository = "https://github.com/inkbox-ai/inkbox/tree/main/sdk/rust"
 keywords = ["inkbox", "email", "sms", "agents", "api"]
 categories = ["api-bindings"]
 
+# docs.rs builds with default features only, which would hide the optional
+# `tunnels-runtime` API. Build all features there so the full surface renders.
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = []
 # The tunnels reverse-proxy runtime (local TLS-terminating HTTP/2 + WebSocket
