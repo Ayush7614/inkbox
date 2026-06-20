@@ -126,11 +126,10 @@ plane are implemented and tested. The tunnels **data-plane runtime**
 - Passthrough bootstrap: EC P-256 keypair + PKCS#10 CSR signing + cert-chain
   persistence.
 
-61 unit/integration tests cover the wire codecs, crypto, CSR, URL-forward, and
-runtime lifecycle. The bidirectional bridge **pumps compile and follow the
-Python control flow but have not been exercised against a live edge** in this
-repo — run them against a real tunnel to validate end-to-end. See
-`src/tunnels/client/`.
+115 unit/integration tests cover the wire codecs, crypto, CSR, URL-forward, and
+runtime lifecycle. The passthrough data plane has been validated end-to-end
+against a live edge (TLS-terminated HTTP plus a real-time call media
+WebSocket). See `src/tunnels/client/`.
 
 ## License
 
