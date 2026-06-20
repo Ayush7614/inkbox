@@ -87,7 +87,10 @@ jobs:
           cargo build
           cargo build --features tunnels-runtime
 
-      - name: Run tests
+      - name: Run tests (default features)
+        run: cargo test
+
+      - name: Run tests (tunnels-runtime)
         run: cargo test --features tunnels-runtime
 
       # Advisory for now — the crate still carries clippy/style warnings to clean up.
