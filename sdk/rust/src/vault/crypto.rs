@@ -161,6 +161,10 @@ pub fn compute_auth_hash(master_key: &[u8]) -> String {
 ///
 /// The `aes-gcm` crate appends the 16-byte tag to the ciphertext, so the
 /// concatenation order is `ciphertext_with_tag[..-16] || nonce || tag`.
+// `Nonce::from_slice` is deprecated in generic-array 0.14.9+, but aes-gcm 0.10
+// still pins generic-array 0.14.x (no migration to 1.x yet), so this is the
+// supported API for the pinned dependency.
+#[allow(deprecated)]
 fn aes_gcm_encrypt(key: &[u8], plaintext: &[u8], aad: &str) -> Result<Vec<u8>> {
     // Random 12-byte nonce.
     let mut iv = [0u8; AES_IV_BYTES];
@@ -192,6 +196,9 @@ fn aes_gcm_encrypt(key: &[u8], plaintext: &[u8], aad: &str) -> Result<Vec<u8>> {
 }
 
 /// Decrypt an AES-256-GCM blob formatted as `ciphertext || nonce || tag`.
+// See `aes_gcm_encrypt`: `Nonce::from_slice` is the supported API for the
+// pinned aes-gcm 0.10 / generic-array 0.14.x.
+#[allow(deprecated)]
 fn aes_gcm_decrypt(key: &[u8], blob: &[u8], aad: &str) -> Result<Vec<u8>> {
     if blob.len() < AES_IV_BYTES + AES_TAG_BYTES {
         return Err(InkboxError::VaultKey("ciphertext blob too short".into()));
