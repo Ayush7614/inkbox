@@ -7,7 +7,7 @@ if [[ "${1:-}" == "--prod" ]]; then
 fi
 
 # Load .env from repo root if present (e.g. CARGO_REGISTRY_TOKEN for crates.io)
-ENV_FILE="$(dirname "$0")/../.env"
+ENV_FILE="$(dirname "$0")/../../.env"
 if [[ -f "$ENV_FILE" ]]; then
   set -a; source "$ENV_FILE"; set +a
 fi
