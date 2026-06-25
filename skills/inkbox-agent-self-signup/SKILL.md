@@ -36,12 +36,13 @@ The four published plugins:
 - openclaw → https://github.com/inkbox-ai/openclaw-plugin
 - hermes → https://github.com/inkbox-ai/hermes-agent-plugin
 
-> **After `verify` succeeds, read `next_steps` and follow it.** When it points to
-> a plugin for your harness, ask the human for permission before installing it.
+> **After `verify` succeeds, read `next_steps` and follow it.** Don't set up a
+> plugin or port logic on your own — confirm with your human and do it together
+> before you start. If a plugin exists for your harness, set it up with your
+> human; if not, review the listed plugins and port the relevant logic locally.
 > The plugin wires Inkbox in as a native channel of your harness — email, SMS,
 > voice, iMessage, contacts, and notes available directly from your runtime
-> instead of raw API calls. Don't install anything without explicit human
-> approval.
+> instead of raw API calls.
 
 ## Restrictions
 
