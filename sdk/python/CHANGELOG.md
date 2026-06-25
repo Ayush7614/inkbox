@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.10 — Agent harness
+
+### Added
+
+- **Optional `harness` on agent self-signup.** `Inkbox.signup(...)` accepts a `harness` keyword identifying the agent harness/runtime. The signup response now carries `harness` (the echoed value) and `plugin_available` (whether a matching plugin exists), and the verify response carries `next_steps`. New fields parse with defaults (`harness`/`next_steps` → `None`, `plugin_available` → `False`) so responses from older servers still deserialize.
+
 ## 0.4.8 — graceful tunnel reconnect on redeploy
 
 ### Added

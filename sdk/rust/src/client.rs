@@ -408,6 +408,7 @@ impl Inkbox {
         display_name: Option<&str>,
         agent_handle: Option<&str>,
         email_local_part: Option<&str>,
+        harness: Option<&str>,
         base_url: Option<&str>,
         timeout_secs: Option<f64>,
     ) -> Result<AgentSignupResponse> {
@@ -422,6 +423,11 @@ impl Inkbox {
         }
         if let Some(v) = email_local_part {
             body.insert("email_local_part".into(), v.into());
+        }
+        // Optional identifier for the agent harness/runtime; the server echoes
+        // it back and flags `plugin_available` when a matching plugin exists.
+        if let Some(v) = harness {
+            body.insert("harness".into(), v.into());
         }
         let data = signup_request(
             "POST",

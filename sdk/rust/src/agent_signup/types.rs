@@ -12,6 +12,13 @@ pub struct AgentSignupResponse {
     pub claim_status: String,
     pub human_email: String,
     pub message: String,
+    /// Echoes the `harness` supplied at signup, when one was given.
+    #[serde(default)]
+    pub harness: Option<String>,
+    /// Whether a matching plugin exists for the supplied `harness`. Absent on
+    /// older servers, where it defaults to `false`.
+    #[serde(default)]
+    pub plugin_available: bool,
 }
 
 /// Response from `POST /api/v1/agent-signup/verify`.
@@ -20,6 +27,9 @@ pub struct AgentSignupVerifyResponse {
     pub claim_status: String,
     pub organization_id: String,
     pub message: String,
+    /// Suggested next steps after verification. Absent on older servers.
+    #[serde(default)]
+    pub next_steps: Option<String>,
 }
 
 /// Response from `POST /api/v1/agent-signup/resend-verification`.
