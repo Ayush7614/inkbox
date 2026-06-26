@@ -402,6 +402,7 @@ impl Inkbox {
     // ----- Agent signup (associated functions — no client instance needed) ---
 
     /// Register a new agent (public — no API key required).
+    #[allow(clippy::too_many_arguments)]
     pub fn signup(
         human_email: &str,
         note_to_human: &str,
