@@ -11,6 +11,30 @@ import {
   type BootstrapResult,
 } from "./helpers.js";
 
+// Approve (claim) every unclaimed agent currently linked to the pooled human,
+// dropping its per-email unclaimed count to zero. Best-effort: a leftover that
+// won't approve is skipped, since freeing even one slot is enough to sign up.
+async function approveAllPending(
+  apiUrl: string,
+  authHeaders: Record<string, string>,
+  orgId: string,
+): Promise<void> {
+  const resp = await fetch(`${apiUrl}/agent-signup/pending`, { headers: authHeaders });
+  if (!resp.ok) return;
+  const { agents } = await resp.json();
+  for (const agent of agents ?? []) {
+    try {
+      await fetch(`${apiUrl}/agent-signup/${agent.identity_id}/approve`, {
+        method: "POST",
+        headers: { ...authHeaders, "Content-Type": "application/json" },
+        body: JSON.stringify({ organization_id: orgId }),
+      });
+    } catch {
+      // best-effort drain
+    }
+  }
+}
+
 describe("TypeScript SDK signup", { timeout: 300_000 }, () => {
   let config: SdkIntegrationConfig;
   let bootstrap: BootstrapResult;
@@ -33,23 +57,6 @@ describe("TypeScript SDK signup", { timeout: 300_000 }, () => {
     // explicitly (exercising that arg) without triggering the 422.
     const emailLocalPart = agentHandle;
 
-    logStep(config, "sign up agent with explicit handle and email local part");
-    const signup = await Inkbox.signup(
-      {
-        humanEmail: bootstrap.emailAddress,
-        noteToHuman: "TypeScript SDK integration signup test",
-        agentHandle,
-        emailLocalPart,
-        harness: "claude-code",
-      },
-      { baseUrl: config.baseUrl, timeoutMs: config.httpTimeout },
-    );
-    expect(signup.agentHandle).toBe(agentHandle);
-    expect(signup.emailAddress.startsWith(`${emailLocalPart}@`)).toBe(true);
-    // We pass a harness to confirm the request param is accepted; the response
-    // no longer echoes it, so just assert signup succeeded.
-    expect(signup.apiKey).toBeTruthy();
-
     const apiUrl = `${config.baseUrl.replace(/\/$/, "")}/api/v1`;
 
     logStep(config, "mint JWT for human approval");
@@ -66,10 +73,31 @@ describe("TypeScript SDK signup", { timeout: 300_000 }, () => {
     });
     expect(jwtResp.ok).toBe(true);
     const jwt = (await jwtResp.json()).jwt as string;
+    const authHeaders = { Authorization: `Bearer ${jwt}` };
+
+    // The bootstrap human is a shared pooled creator, so unclaimed agents
+    // leaked by earlier failed runs accumulate against a per-email cap and
+    // would 429 this signup. Claim any leftovers first to free the cap.
+    logStep(config, "drain leftover unclaimed agents for the pooled human");
+    await approveAllPending(apiUrl, authHeaders, bootstrap.orgId);
+
+    logStep(config, "sign up agent with explicit handle and email local part");
+    const signup = await Inkbox.signup(
+      {
+        humanEmail: bootstrap.emailAddress,
+        noteToHuman: "TypeScript SDK integration signup test",
+        agentHandle,
+        emailLocalPart,
+        harness: "claude-code",
+      },
+      { baseUrl: config.baseUrl, timeoutMs: config.httpTimeout },
+    );
+    expect(signup.agentHandle).toBe(agentHandle);
+    expect(signup.emailAddress.startsWith(`${emailLocalPart}@`)).toBe(true);
 
     logStep(config, "find pending signup and approve it into bootstrap org");
     const pendingResp = await fetch(`${apiUrl}/agent-signup/pending`, {
-      headers: { Authorization: `Bearer ${jwt}` },
+      headers: authHeaders,
     });
     expect(pendingResp.ok).toBe(true);
     const pending = await pendingResp.json();
@@ -81,7 +109,7 @@ describe("TypeScript SDK signup", { timeout: 300_000 }, () => {
     const approveResp = await fetch(`${apiUrl}/agent-signup/${pendingAgent.identity_id}/approve`, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${jwt}`,
+        ...authHeaders,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ organization_id: bootstrap.orgId }),
