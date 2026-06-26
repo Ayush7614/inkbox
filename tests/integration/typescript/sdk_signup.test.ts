@@ -88,6 +88,7 @@ describe("TypeScript SDK signup", { timeout: 300_000 }, () => {
         noteToHuman: "TypeScript SDK integration signup test",
         agentHandle,
         emailLocalPart,
+        harness: "claude-code",
       },
       { baseUrl: config.baseUrl, timeoutMs: config.httpTimeout },
     );

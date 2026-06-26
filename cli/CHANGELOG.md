@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.10 — Agent harness
+
+### Added
+
+- **`--harness <harness>` flag on `inkbox signup`.** Passes an optional identifier for the agent harness/runtime; when a plugin exists for it, post-verification guidance is folded into the verify `message`. Bundles `@inkbox/sdk` `0.4.10`.
+
 ## 0.4.8 — graceful tunnel reconnect on redeploy
 
 ### Changed

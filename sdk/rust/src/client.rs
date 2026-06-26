@@ -402,12 +402,14 @@ impl Inkbox {
     // ----- Agent signup (associated functions — no client instance needed) ---
 
     /// Register a new agent (public — no API key required).
+    #[allow(clippy::too_many_arguments)]
     pub fn signup(
         human_email: &str,
         note_to_human: &str,
         display_name: Option<&str>,
         agent_handle: Option<&str>,
         email_local_part: Option<&str>,
+        harness: Option<&str>,
         base_url: Option<&str>,
         timeout_secs: Option<f64>,
     ) -> Result<AgentSignupResponse> {
@@ -422,6 +424,9 @@ impl Inkbox {
         }
         if let Some(v) = email_local_part {
             body.insert("email_local_part".into(), v.into());
+        }
+        if let Some(v) = harness {
+            body.insert("harness".into(), v.into());
         }
         let data = signup_request(
             "POST",

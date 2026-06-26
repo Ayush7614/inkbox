@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.10 — Agent harness
+
+### Added
+
+- **Optional `harness` on agent self-signup.** The signup helper accepts an optional `harness` identifying the agent harness/runtime (free-form string; unknown values accepted). When a plugin exists for the harness, post-verification guidance is folded into the verify response's `message`.
+
 ## 0.4.8 — graceful tunnel reconnect on redeploy
 
 ### Added

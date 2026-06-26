@@ -12,6 +12,7 @@ export interface AgentSignupRequest {
   displayName?: string;
   agentHandle?: string;
   emailLocalPart?: string;
+  harness?: string;
 }
 
 export interface AgentSignupResponse {
@@ -152,6 +153,7 @@ export function agentSignupRequestToWire(
   if (req.displayName !== undefined) body["display_name"] = req.displayName;
   if (req.agentHandle !== undefined) body["agent_handle"] = req.agentHandle;
   if (req.emailLocalPart !== undefined) body["email_local_part"] = req.emailLocalPart;
+  if (req.harness !== undefined) body["harness"] = req.harness;
   return body;
 }
 

@@ -498,6 +498,7 @@ class Inkbox:
         display_name: str | None = None,
         agent_handle: str | None = None,
         email_local_part: str | None = None,
+        harness: str | None = None,
         base_url: str = _DEFAULT_BASE_URL,
         timeout: float = 30.0,
     ) -> AgentSignupResponse:
@@ -513,8 +514,14 @@ class Inkbox:
             display_name: Optional human-readable name for the agent.
             agent_handle: Optional requested handle for the agent identity.
             email_local_part: Optional requested mailbox local part.
+            harness: Optional identifier for the agent harness/runtime (e.g.
+                ``"claude-code"``, ``"codex"``). Free-form string passed to the
+                server to record the calling runtime.
             base_url: Override the API base URL.
             timeout: Request timeout in seconds.
+
+        Returns:
+            AgentSignupResponse: Provisioned mailbox, org, and one-time API key.
         """
         body: dict[str, str] = {
             "human_email": human_email,
@@ -526,6 +533,8 @@ class Inkbox:
             body["agent_handle"] = agent_handle
         if email_local_part is not None:
             body["email_local_part"] = email_local_part
+        if harness is not None:
+            body["harness"] = harness
         data = cls._signup_request(
             "POST", "", json=body, base_url=base_url, timeout=timeout,
         )
