@@ -15,6 +15,24 @@ from conftest import SdkIntegrationContext, log_step
 from inkbox import Inkbox
 
 
+def _approve_all_pending(jwt_client: httpx.Client, org_id: str) -> None:
+    """Claim every unclaimed agent linked to the pooled human, freeing the cap.
+
+    Best-effort: a leftover that won't approve is skipped, since freeing even
+    one slot is enough for the subsequent signup to succeed.
+    """
+    resp = jwt_client.get("/agent-signup/pending")
+    resp.raise_for_status()
+    for agent in resp.json().get("agents", []):
+        try:
+            jwt_client.post(
+                f"/agent-signup/{agent['identity_id']}/approve",
+                json={"organization_id": org_id},
+            ).raise_for_status()
+        except httpx.HTTPError:
+            pass
+
+
 @pytest.mark.sdk_integration
 def test_python_sdk_signup_accepts_custom_handle_and_email_local_part(
     sdk_context: SdkIntegrationContext,
@@ -28,18 +46,6 @@ def test_python_sdk_signup_accepts_custom_handle_and_email_local_part(
     # the SDK call so the wire body still includes `email_local_part`
     # explicitly (exercising that arg) without triggering the 422.
     email_local_part = agent_handle
-
-    log_step(ctx, "sign up agent with explicit handle and email local part")
-    signup = Inkbox.signup(
-        human_email=ctx.bootstrap.email_address,
-        note_to_human="Python SDK integration signup test",
-        agent_handle=agent_handle,
-        email_local_part=email_local_part,
-        base_url=cfg.base_url,
-        timeout=cfg.http_timeout,
-    )
-    assert signup.agent_handle == agent_handle
-    assert signup.email_address.startswith(f"{email_local_part}@")
 
     api_url = f"{cfg.base_url.rstrip('/')}/api/v1"
 
@@ -56,12 +62,30 @@ def test_python_sdk_signup_accepts_custom_handle_and_email_local_part(
     jwt_resp.raise_for_status()
     jwt = jwt_resp.json()["jwt"]
 
-    log_step(ctx, "find pending signup and approve it into bootstrap org")
     with httpx.Client(
         base_url=api_url,
         headers={"Authorization": f"Bearer {jwt}"},
         timeout=cfg.http_timeout,
     ) as jwt_client:
+        # The bootstrap human is a shared pooled creator, so unclaimed agents
+        # leaked by earlier failed runs accumulate against a per-email cap and
+        # would 429 this signup. Claim any leftovers first to free the cap.
+        log_step(ctx, "drain leftover unclaimed agents for the pooled human")
+        _approve_all_pending(jwt_client, ctx.bootstrap.org_id)
+
+        log_step(ctx, "sign up agent with explicit handle and email local part")
+        signup = Inkbox.signup(
+            human_email=ctx.bootstrap.email_address,
+            note_to_human="Python SDK integration signup test",
+            agent_handle=agent_handle,
+            email_local_part=email_local_part,
+            base_url=cfg.base_url,
+            timeout=cfg.http_timeout,
+        )
+        assert signup.agent_handle == agent_handle
+        assert signup.email_address.startswith(f"{email_local_part}@")
+
+        log_step(ctx, "find pending signup and approve it into bootstrap org")
         pending = jwt_client.get("/agent-signup/pending")
         pending.raise_for_status()
         pending_agent = next(

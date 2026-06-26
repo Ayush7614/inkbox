@@ -2,8 +2,8 @@
 
 import { randomUUID } from "node:crypto";
 import { describe, it, expect, beforeAll } from "vitest";
-import { Inkbox } from "@inkbox/sdk";
-import type { Message, DecryptedVaultSecret } from "@inkbox/sdk";
+import { Inkbox, MessageDirection } from "@inkbox/sdk";
+import type { Message, DecryptedVaultSecret, APIKeyPayload } from "@inkbox/sdk";
 import {
   loadConfig,
   loadBootstrapFromEnv,
@@ -110,7 +110,7 @@ describe("TypeScript SDK lifecycle", { timeout: 300_000 }, () => {
       "inbound message delivered to bravo",
       async () => {
         const msgs: Message[] = [];
-        for await (const msg of bravo.iterEmails({ direction: "inbound" })) {
+        for await (const msg of bravo.iterEmails({ direction: MessageDirection.INBOUND })) {
           msgs.push(msg);
           if (msgs.length >= 50) break;
         }
@@ -161,7 +161,7 @@ describe("TypeScript SDK lifecycle", { timeout: 300_000 }, () => {
       "forwarded message delivered to alpha",
       async () => {
         const msgs: Message[] = [];
-        for await (const msg of alpha.iterEmails({ direction: "inbound" })) {
+        for await (const msg of alpha.iterEmails({ direction: MessageDirection.INBOUND })) {
           msgs.push(msg);
           if (msgs.length >= 50) break;
         }
@@ -227,15 +227,15 @@ describe("TypeScript SDK lifecycle", { timeout: 300_000 }, () => {
     const creds = await alpha.getCredentials();
     const apiKeys = creds.listApiKeys();
     expect(apiKeys).toHaveLength(1);
-    expect(apiKeys[0].payload.apiKey).toBe("sk-test-secret-12345");
+    expect(creds.getApiKey(apiKeys[0].id).apiKey).toBe("sk-test-secret-12345");
     const logins = creds.listLogins();
     expect(logins).toHaveLength(1);
-    expect(logins[0].payload.username).toBe("testuser");
+    expect(creds.getLogin(logins[0].id).username).toBe("testuser");
 
     logStep(config, "get secret by ID and verify decrypted payload");
     const fetched = await alpha.getSecret(secretA.id);
     expect(fetched.name).toBe("test-api-key");
-    expect(fetched.payload.apiKey).toBe("sk-test-secret-12345");
+    expect((fetched.payload as APIKeyPayload).apiKey).toBe("sk-test-secret-12345");
 
     logStep(config, "delete secrets");
     await alpha.deleteSecret(secretA.id);
