@@ -74,6 +74,10 @@ describe("MessagesResource.get", () => {
 
     expect(http.get).toHaveBeenCalledWith(`/mailboxes/${ADDR}/messages/${MSG_ID}`);
     expect(detail.bodyText).toBe("Hi there, this is a test message body.");
+    expect(detail.replyAllRecipients).toEqual({
+      to: ["alice@example.com"],
+      cc: ["bob@example.com"],
+    });
   });
 });
 
