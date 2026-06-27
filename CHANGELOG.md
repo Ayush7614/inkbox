@@ -8,7 +8,8 @@ Versions move in lockstep across `@inkbox/sdk` (TypeScript), `inkbox`
 
 ### Added
 
-- **Email reply-all helpers** in the TypeScript and Python SDKs, plus `inkbox email reply-all <message-id>` in the CLI. Recipients are resolved by the API from the source message.
+- **Email reply-all helpers** in the TypeScript, Python, and Rust SDKs, plus `inkbox email reply-all <message-id>` in the CLI. Recipients are resolved by the API from the source message.
+  - Rust SDK: `messages().reply_all(...)` and `AgentIdentity::reply_all_email(...)`, at parity with the Python and TypeScript SDKs.
 
 ## 0.4.10 — Agent harness
 
