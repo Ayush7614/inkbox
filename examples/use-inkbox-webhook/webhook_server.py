@@ -5,9 +5,10 @@ Exposes an in-process ASGI handler at a public Inkbox tunnel URL, registers a
 ``message.received`` webhook subscription, sends a probe email, verifies the
 incoming webhook signature, auto-replies once, then cleans up.
 
-Requires INKBOX_API_KEY and INKBOX_WEBHOOK_SIGNING_KEY in the environment
-(see .env.example). Set INKBOX_ROTATE_SIGNING_KEY=1 only when you intend to
-rotate the org signing key via create_signing_key().
+Requires INKBOX_API_KEY in the environment (see .env.example).
+Optional INKBOX_WEBHOOK_SIGNING_KEY — if unset, an identity-scoped signing
+key is created via POST /identities/{handle}/signing-key after the demo
+identity is provisioned.
 """
 
 from __future__ import annotations
@@ -69,25 +70,25 @@ async def _send_response(
     await send({"type": "http.response.body", "body": body})
 
 
-def _resolve_signing_secret(inkbox: Inkbox) -> str:
+def _resolve_signing_secret(inkbox: Inkbox, identity_handle: str) -> str:
     env_secret = os.environ.get("INKBOX_WEBHOOK_SIGNING_KEY", "").strip()
-    if env_secret:
+    rotate = os.environ.get("INKBOX_ROTATE_SIGNING_KEY", "").strip().lower()
+    if env_secret and rotate not in {"1", "true", "yes"}:
         print("=> Using INKBOX_WEBHOOK_SIGNING_KEY from environment")
         return env_secret
 
-    rotate = os.environ.get("INKBOX_ROTATE_SIGNING_KEY", "").strip().lower()
     if rotate in {"1", "true", "yes"}:
-        print("=> INKBOX_ROTATE_SIGNING_KEY set — creating/rotating org signing key")
-        key = inkbox.create_signing_key()
-        print("   Save the signing key — it is shown only once.")
-        return key.signing_key
+        print(f"=> Rotating signing key for identity {identity_handle}")
+    else:
+        print(f"=> Creating signing key for identity {identity_handle}")
 
-    print(
-        "ERROR: Set INKBOX_WEBHOOK_SIGNING_KEY (from the Inkbox console), "
-        "or INKBOX_ROTATE_SIGNING_KEY=1 to rotate the org key.",
-        file=sys.stderr,
+    data = inkbox._api_http.post(
+        f"/identities/{identity_handle}/signing-key",
+        json={},
     )
-    sys.exit(1)
+    signing_key = data["signing_key"]
+    print("   Save the signing key — it is shown only once.")
+    return signing_key
 
 
 async def _cleanup(
@@ -146,7 +147,7 @@ async def main() -> None:
                 f"=> Created identity: {created_handle} ({mailbox.email_address})",
             )
 
-            signing_secret = _resolve_signing_secret(inkbox)
+            signing_secret = _resolve_signing_secret(inkbox, created_handle)
 
             async def asgi_app(scope: dict[str, Any], receive: Any, send: Any) -> None:
                 nonlocal handled_probe
@@ -189,15 +190,32 @@ async def main() -> None:
                 ):
                     handled_probe = True
                     stored_message_id = message.get("id")
-                    if stored_message_id:
-                        inkbox.get_identity(created_handle).reply_all_email(
-                            stored_message_id,
-                            body_text=(
-                                "Got your webhook — auto-reply from the "
-                                "Inkbox webhook example."
-                            ),
-                        )
-                        print(f"=> Auto-replied to message {stored_message_id}")
+                    rfc_message_id = message.get("message_id")
+                    from_address = message.get("from_address")
+                    try:
+                        identity_ref = inkbox.get_identity(created_handle)
+                        if stored_message_id:
+                            identity_ref.reply_all_email(
+                                stored_message_id,
+                                body_text=(
+                                    "Got your webhook — auto-reply from the "
+                                    "Inkbox webhook example."
+                                ),
+                            )
+                            print(f"=> Auto-replied via reply_all to {stored_message_id}")
+                        elif from_address and rfc_message_id:
+                            identity_ref.send_email(
+                                to=[from_address],
+                                subject=f"Re: {PROBE_SUBJECT}",
+                                body_text=(
+                                    "Got your webhook — auto-reply from the "
+                                    "Inkbox webhook example."
+                                ),
+                                in_reply_to_message_id=rfc_message_id,
+                            )
+                            print(f"=> Auto-replied to {from_address}")
+                    except InkboxAPIError as exc:
+                        print(f"   Auto-reply skipped: {exc}")
                     webhook_received.set()
 
                 await _send_response(send, 200, b"ok")
@@ -230,7 +248,7 @@ async def main() -> None:
 
             print(f"=> Waiting up to {WAIT_SECONDS}s for verified webhook...")
             await asyncio.wait_for(webhook_received.wait(), timeout=WAIT_SECONDS)
-            print("=> Webhook received, signature verified, auto-reply sent")
+            print("=> Webhook received and signature verified")
         except TimeoutError:
             print(
                 f"ERROR: No webhook received within {WAIT_SECONDS}s.",
